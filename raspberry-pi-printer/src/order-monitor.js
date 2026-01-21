@@ -11,11 +11,50 @@ export class OrderMonitor {
     this.retryDelays = [1000, 3000, 5000];
   }
 
-  start() {
+  async start() {
     console.log('Starting order monitor...');
+    await this.loadExistingOrders();
     this.setupRealtimeListener();
     this.setupCommandListener();
     this.startStatusUpdates();
+  }
+
+  async loadExistingOrders() {
+    try {
+      console.log('Loading existing unprinted orders...');
+      const snapshot = await db
+        .collection('orders')
+        .orderBy('created_at', 'desc')
+        .limit(100)
+        .get();
+
+      let loadedCount = 0;
+      let skippedCount = 0;
+
+      snapshot.docs.forEach((doc) => {
+        const order = {
+          id: doc.id,
+          ...doc.data()
+        };
+
+        this.printedOrders.add(order.id);
+
+        if (!order.printed) {
+          console.log(`Queuing existing unprinted order: ${order.id}`);
+          this.addToQueue(order);
+          loadedCount++;
+        } else {
+          skippedCount++;
+        }
+      });
+
+      console.log(
+        `Startup initialization complete: ${loadedCount} unprinted orders queued, ${skippedCount} already printed orders skipped`
+      );
+    } catch (error) {
+      console.error('Error loading existing orders:', error);
+      throw error;
+    }
   }
 
   setupRealtimeListener() {
@@ -32,10 +71,17 @@ export class OrderMonitor {
                 ...change.doc.data()
               };
 
+              if (this.printedOrders.has(order.id)) {
+                console.log(`Order already processed: ${order.id}`);
+                return;
+              }
+
               if (!order.printed) {
                 console.log(`New order received: ${order.id}`);
                 this.addToQueue(order);
               }
+
+              this.printedOrders.add(order.id);
             }
           });
         },
