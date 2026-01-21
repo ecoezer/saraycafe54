@@ -30,6 +30,10 @@ export interface OrderData {
   browser_info?: string;
   device_type?: string;
   ip_address?: string;
+  printed?: boolean;
+  print_timestamp?: Timestamp | any;
+  print_retry_count?: number;
+  print_error?: string;
 }
 
 export class FirebaseService {
@@ -115,6 +119,18 @@ export class FirebaseService {
       await deleteDoc(doc(db, this.ORDERS_COLLECTION, orderId));
     } catch (error) {
       console.error('Error deleting order:', error);
+      throw error;
+    }
+  }
+
+  static async reprintOrder(orderId: string): Promise<void> {
+    try {
+      await fetch(`http://localhost:3001/orders/${orderId}/reprint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error sending reprint request:', error);
       throw error;
     }
   }

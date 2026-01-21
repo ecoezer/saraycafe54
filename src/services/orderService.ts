@@ -14,3 +14,7 @@ export const fetchOrders = async (): Promise<OrderData[]> => {
 export const deleteOrder = async (orderId: string): Promise<void> => {
   return FirebaseService.deleteOrder(orderId);
 };
+
+export const reprintOrder = async (orderId: string): Promise<void> => {
+  return FirebaseService.reprintOrder(orderId);
+};

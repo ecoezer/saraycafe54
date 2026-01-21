@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Clock, Phone, MapPin, Package, LogOut, RefreshCw, Monitor, Smartphone, Calendar, Trash2, BarChart3 } from 'lucide-react';
-import { fetchOrders, deleteOrder, OrderData } from '../services/orderService';
+import { ShoppingBag, Clock, Phone, MapPin, Package, LogOut, RefreshCw, Monitor, Smartphone, Calendar, Trash2, BarChart3, Printer, CheckCircle, AlertCircle } from 'lucide-react';
+import { fetchOrders, deleteOrder, reprintOrder, OrderData } from '../services/orderService';
+import { PrinterStatus } from './PrinterStatus';
 
 interface AdminOrderHistoryProps {
   onLogout: () => void;
@@ -20,6 +21,7 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
   const [minDate, setMinDate] = useState('');
   const [maxDate, setMaxDate] = useState('');
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [reprintingOrderId, setReprintingOrderId] = useState<string | null>(null);
 
   const getOrderDate = (order: OrderData): Date => {
     if (order.created_at?.toDate) {
@@ -152,6 +154,22 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
     }
   };
 
+  const handleReprintOrder = async (orderId: string) => {
+    if (!orderId) return;
+
+    setReprintingOrderId(orderId);
+
+    try {
+      await reprintOrder(orderId);
+      alert('Bestellung an Drucker gesendet!');
+    } catch (err) {
+      console.error('Error reprinting order:', err);
+      alert('Fehler beim erneuten Drucken. Bitte versuchen Sie es erneut.');
+    } finally {
+      setReprintingOrderId(null);
+    }
+  };
+
   const getCountryFlag = (ip: string): string => {
     if (!ip) return '🌍';
     if (ip.startsWith('192.168') || ip.startsWith('10.') || ip.startsWith('172.')) return '🏠';
@@ -201,6 +219,8 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        <PrinterStatus />
+
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-6">
           <div className="flex flex-wrap gap-2 mb-4">
             <button
@@ -324,18 +344,45 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
           <div className="space-y-4">
             {filteredOrders.map((order) => (
               <div key={order.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-                <button
-                  onClick={() => handleDeleteOrder(order.id!)}
-                  disabled={deletingOrderId === order.id}
-                  className="absolute top-4 right-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
-                  title="Bestellung löschen"
-                >
-                  {deletingOrderId === order.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                </button>
+                <div className="absolute top-4 right-4 flex gap-2 z-10">
+                  {order.printed ? (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded text-xs">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                      <span className="text-green-700">Gedruckt</span>
+                    </div>
+                  ) : order.print_error ? (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded text-xs">
+                      <AlertCircle className="w-3 h-3 text-red-600" />
+                      <span className="text-red-700">Fehler</span>
+                    </div>
+                  ) : null}
+
+                  <button
+                    onClick={() => handleReprintOrder(order.id!)}
+                    disabled={reprintingOrderId === order.id}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Erneut drucken"
+                  >
+                    {reprintingOrderId === order.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    ) : (
+                      <Printer className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteOrder(order.id!)}
+                    disabled={deletingOrderId === order.id}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Bestellung löschen"
+                  >
+                    {deletingOrderId === order.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
                   <div className="md:col-span-2 p-4 border-b md:border-b-0 md:border-r border-gray-200 space-y-3">
