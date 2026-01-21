@@ -123,7 +123,7 @@ export class OrderMonitor {
       this.isPrinting = false;
 
       if (this.printQueue.length > 0) {
-        setTimeout(() => this.processPrintQueue(), 500);
+        setTimeout(() => this.processPrintQueue(), 1500);
       }
     }
   }
@@ -164,11 +164,15 @@ export class OrderMonitor {
           this.processPrintQueue();
         }, delay);
       } else {
-        await db.collection('orders').doc(order.id).update({
-          printed: false,
-          print_error: error.message,
-          print_retry_count: retryCount
-        });
+        try {
+          await db.collection('orders').doc(order.id).update({
+            printed: false,
+            print_error: error.message,
+            print_retry_count: retryCount
+          });
+        } catch (dbError) {
+          console.error(`Failed to update order status in Firebase: ${dbError.message}`);
+        }
 
         console.error(`Failed to print order ${order.id} after ${this.maxRetries} retries`);
       }

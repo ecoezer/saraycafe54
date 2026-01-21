@@ -6,6 +6,14 @@ import { OrderMonitor } from './order-monitor.js';
 
 dotenv.config();
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
