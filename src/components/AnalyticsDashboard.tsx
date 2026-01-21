@@ -12,7 +12,7 @@ interface AnalyticsDashboardProps {
   onBack: () => void;
 }
 
-type TimePeriod = 'today' | 'yesterday' | 'week' | 'month' | 'year';
+type TimePeriod = 'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all';
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ onBack }) => {
   const [orders, setOrders] = useState<OrderData[]>([]);
@@ -64,6 +64,8 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ onBack }) => {
       case 'year':
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         return [startOfYear, endOfDay];
+      case 'all':
+        return [new Date(0), endOfDay];
       default:
         return [startOfDay, endOfDay];
     }
