@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { fetchOrders, OrderData } from '../services/orderService';
 import { calculateAnalytics, filterOrdersByDateRange, AnalyticsData } from '../utils/analyticsUtils';
+import { generateDetailedOrdersCSV, downloadCSV, getExportFilename } from '../utils/csvExportUtils';
 
 interface AnalyticsDashboardProps {
   onBack: () => void;
@@ -84,51 +85,14 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ onBack }) => {
   }, [filteredOrders]);
 
   const exportToCSV = () => {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `analytics-${timePeriod}-${timestamp}.csv`;
-
-    const headers = [
-      'Metric',
-      'Value',
-    ];
-
-    const rows = [
-      ['Total Revenue', `€${analytics.totalRevenue.toFixed(2)}`],
-      ['Total Orders', analytics.totalOrders.toString()],
-      ['Average Order Value', `€${analytics.averageOrderValue.toFixed(2)}`],
-      ['Pickup Orders', analytics.pickupCount.toString()],
-      ['Delivery Orders', analytics.deliveryCount.toString()],
-      [],
-      ['Top Products', ''],
-      ...analytics.topProducts.map((p) => [p.name, `${p.count} orders - €${p.revenue.toFixed(2)}`]),
-      [],
-      ['Device Statistics', ''],
-      ['Mobile', analytics.deviceStats.mobile.toString()],
-      ['Tablet', analytics.deviceStats.tablet.toString()],
-      ['Desktop', analytics.deviceStats.desktop.toString()],
-      [],
-      ['Platform Statistics', ''],
-      ['iOS', analytics.platformStats.ios.toString()],
-      ['Android', analytics.platformStats.android.toString()],
-      [],
-      ['Browser Statistics', ''],
-      ...analytics.browserStats.map((b) => [b.name, b.count.toString()]),
-    ];
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const filename = getExportFilename(timePeriod);
+      const blob = generateDetailedOrdersCSV(filteredOrders);
+      downloadCSV(blob, filename);
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Failed to export CSV. Please try again.');
+    }
   };
 
   if (isLoading) {

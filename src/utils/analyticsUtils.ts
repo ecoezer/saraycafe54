@@ -19,13 +19,9 @@ export interface AnalyticsData {
   browserStats: Array<{ name: string; count: number }>;
 }
 
-export const parsePickupDelivery = (notes: string): 'pickup' | 'delivery' => {
-  if (!notes) return 'delivery';
-  const lowerNotes = notes.toLowerCase();
-  if (lowerNotes.includes('abholung') || lowerNotes.includes('pickup')) {
-    return 'pickup';
-  }
-  return 'delivery';
+export const parsePickupDelivery = (deliveryAddress: string): 'pickup' | 'delivery' => {
+  if (!deliveryAddress) return 'delivery';
+  return deliveryAddress === 'Abholung' ? 'pickup' : 'delivery';
 };
 
 export const extractBrowserName = (browserInfo?: string): string => {
@@ -100,7 +96,7 @@ export const calculateAnalytics = (orders: OrderData[]): AnalyticsData => {
   const browserCountMap = new Map<string, number>();
 
   orders.forEach((order) => {
-    const orderType = parsePickupDelivery(order.notes || '');
+    const orderType = parsePickupDelivery(order.delivery_address);
     if (orderType === 'pickup') {
       pickupCount++;
     } else {
