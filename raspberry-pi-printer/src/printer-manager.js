@@ -100,6 +100,12 @@ export class PrinterManager {
       throw new Error('Printer not connected');
     }
 
+    try {
+      await this.ensureConnected();
+    } catch (error) {
+      throw new Error(`Printer connection check failed: ${error.message}`);
+    }
+
     return new Promise((resolve, reject) => {
       try {
         const timeout = setTimeout(() => {
@@ -112,7 +118,7 @@ export class PrinterManager {
           .text(receiptText)
           .text('')
           .cut()
-          .close(() => {
+          .execute(() => {
             clearTimeout(timeout);
             resolve();
           });
@@ -120,6 +126,14 @@ export class PrinterManager {
         reject(error);
       }
     });
+  }
+
+  async ensureConnected() {
+    if (!this.isConnected || !this.printer) {
+      throw new Error('Printer is not connected');
+    }
+
+    return Promise.resolve();
   }
 
   async testPrint() {
@@ -146,7 +160,7 @@ Test successful!
           .text(testReceipt)
           .text('')
           .cut()
-          .close(() => {
+          .execute(() => {
             resolve();
           });
       } catch (error) {
