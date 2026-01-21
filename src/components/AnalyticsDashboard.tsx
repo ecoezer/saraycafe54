@@ -1,18 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import {
-  BarChart3,
-  DollarSign,
-  ShoppingCart,
-  TrendingUp,
-  Package,
-  Smartphone,
-  Monitor,
-  ArrowLeft,
-  Download,
-} from 'lucide-react';
+import { BarChart3, DollarSign, ShoppingCart, TrendingUp, Package, ArrowLeft, Download } from 'lucide-react';
 import { fetchOrders, OrderData } from '../services/orderService';
 import { calculateAnalytics, filterOrdersByDateRange, AnalyticsData } from '../utils/analyticsUtils';
 import { generateDetailedOrdersCSV, downloadCSV, getExportFilename } from '../utils/csvExportUtils';
+import StatCard from './analytics/StatCard';
+import TopProductsWidget from './analytics/TopProductsWidget';
+import DeviceStatsCard from './analytics/DeviceStatsCard';
+import TimeFilterBar from './analytics/TimeFilterBar';
 
 interface AnalyticsDashboardProps {
   onBack: () => void;
@@ -142,193 +136,49 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ onBack }) => {
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-6">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setTimePeriod('today')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timePeriod === 'today'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => setTimePeriod('yesterday')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timePeriod === 'yesterday'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
-            >
-              Yesterday
-            </button>
-            <button
-              onClick={() => setTimePeriod('week')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timePeriod === 'week'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setTimePeriod('month')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timePeriod === 'month'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setTimePeriod('year')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timePeriod === 'year'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
-            >
-              Year
-            </button>
-          </div>
+        <div className="mb-6">
+          <TimeFilterBar selectedPeriod={timePeriod} onPeriodChange={setTimePeriod} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-green-600">
-                  €{analytics.totalRevenue.toFixed(2)}
-                </p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-lg">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium mb-1">Total Orders</p>
-                <p className="text-3xl font-bold text-orange-600">
-                  {analytics.totalOrders}
-                </p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium mb-1">Average Order Value</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  €{analytics.averageOrderValue.toFixed(2)}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium mb-1">Pickup vs Delivery</p>
-                <div className="text-sm font-semibold mt-2">
-                  <p className="text-orange-600">{analytics.pickupCount} Pickup</p>
-                  <p className="text-blue-600">{analytics.deliveryCount} Delivery</p>
-                </div>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <Package className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
+          <StatCard
+            icon={<DollarSign className="w-6 h-6" />}
+            label="Total Revenue"
+            value={`€${analytics.totalRevenue.toFixed(2)}`}
+            color="green"
+          />
+          <StatCard
+            icon={<ShoppingCart className="w-6 h-6" />}
+            label="Total Orders"
+            value={analytics.totalOrders}
+            color="orange"
+          />
+          <StatCard
+            icon={<TrendingUp className="w-6 h-6" />}
+            label="Average Order Value"
+            value={`€${analytics.averageOrderValue.toFixed(2)}`}
+            color="blue"
+          />
+          <StatCard
+            icon={<Package className="w-6 h-6" />}
+            label="Pickup vs Delivery"
+            value={`${analytics.pickupCount}/${analytics.deliveryCount}`}
+            color="purple"
+            subtext={`${analytics.pickupCount} pickup, ${analytics.deliveryCount} delivery`}
+          />
         </div>
 
         {analytics.topProducts.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Top Products</h2>
-            <div className="space-y-2">
-              {analytics.topProducts.map((product, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-xs text-gray-600">{product.count} orders</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-green-600">€{product.revenue.toFixed(2)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="mb-6">
+            <TopProductsWidget products={analytics.topProducts} />
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Monitor className="w-5 h-5 text-gray-600" />
-              Device Statistics
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-900">Mobile</span>
-                <span className="text-lg font-bold text-orange-600">{analytics.deviceStats.mobile}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-900">Tablet</span>
-                <span className="text-lg font-bold text-blue-600">{analytics.deviceStats.tablet}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-900">Desktop</span>
-                <span className="text-lg font-bold text-green-600">{analytics.deviceStats.desktop}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Platform Statistics</h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-900">iOS</span>
-                <span className="text-lg font-bold text-blue-600">{analytics.platformStats.ios}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-900">Android</span>
-                <span className="text-lg font-bold text-green-600">{analytics.platformStats.android}</span>
-              </div>
-            </div>
-          </div>
-
+          <DeviceStatsCard title="Device Statistics" deviceStats={analytics.deviceStats} />
+          <DeviceStatsCard title="Platform Statistics" osStats={analytics.platformStats} />
           {analytics.browserStats.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm lg:col-span-2">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Browser Statistics</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {analytics.browserStats.map((browser, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                  >
-                    <span className="font-medium text-gray-900">{browser.name}</span>
-                    <span className="text-lg font-bold text-gray-600">{browser.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <DeviceStatsCard title="Browser Statistics" browserStats={analytics.browserStats} />
           )}
         </div>
       </div>

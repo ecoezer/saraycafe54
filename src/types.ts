@@ -60,3 +60,35 @@ export interface BadgeProps {
   icon: React.ReactNode;
   text: string;
 }
+
+export interface ProductFrequency {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+export interface DeviceStats {
+  mobile: number;
+  tablet: number;
+  desktop: number;
+}
+
+export interface OSStats {
+  ios: number;
+  android: number;
+}
+
+export interface BrowserStats {
+  name: string;
+  count: number;
+}
+
+export interface AnalyticsMetrics {
+  totalRevenue: number;
+  orderCount: number;
+  averageOrderValue: number;
+  pickupDeliveryRatio: {
+    pickup: number;
+    delivery: number;
+  };
+}
