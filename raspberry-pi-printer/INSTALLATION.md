@@ -128,10 +128,12 @@ curl http://localhost:3001/health
 
 You should see the printer status JSON response.
 
-### Send Test Print
-```bash
-curl -X POST http://localhost:3001/printer/test
-```
+### Verify Firebase Connection
+
+Check that the service is writing to Firebase:
+1. Open [Firebase Console](https://console.firebase.google.com)
+2. Navigate to Firestore Database
+3. Look for `printer_status/current` document with printer connection info
 
 ## Step 5: Create Systemd Service
 
@@ -176,13 +178,20 @@ sudo systemctl status saray-printer.service
 sudo journalctl -u saray-printer.service -f
 ```
 
-## Step 6: Configure Frontend Connection
+## Step 6: Frontend Configuration (Firebase Only)
 
-The web app expects the backend service to run on `http://localhost:3001`. If you're accessing from a different machine, update the endpoint in `src/services/FirebaseService.ts`:
+The frontend communicates with this service entirely through Firebase Firestore:
 
-```typescript
-const apiUrl = `http://<raspberry-pi-ip>:3001/orders/${orderId}/reprint`;
-```
+- **No HTTP endpoints** to configure on the frontend
+- **Firebase listeners** monitor printer status in real-time
+- **Commands** are sent via Firebase collections (reprint, test print)
+
+No frontend code changes are needed. Simply ensure:
+1. Frontend has Firebase credentials in `.env`
+2. Raspberry Pi service has Firebase credentials in `.env`
+3. Both services connect to the same Firebase project
+
+See ARCHITECTURE.md for complete details on the real-time communication flow.
 
 ## Troubleshooting
 

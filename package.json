@@ -1,5 +1,6 @@
 {
   "name": "saray-kebap-cafe54",
+  "description": "Food delivery app for Saray Kebap Café54. Uses Firebase Firestore exclusively (non-negotiable). Real-time order printing on Raspberry Pi with USB thermal printer. See ARCHITECTURE.md for details.",
   "private": true,
   "version": "0.0.0",
   "type": "module",

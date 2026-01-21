@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Printer, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
+import { db } from '../config/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 interface PrinterStatusData {
-  isConnected: boolean;
-  type: string;
-  timestamp: string;
+  connected: boolean;
+  connection_type: string;
+  last_update: string;
+  queue_size?: number;
 }
 
 export const PrinterStatus: React.FC = () => {
@@ -12,46 +15,54 @@ export const PrinterStatus: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const checkPrinterStatus = async () => {
+  const sendTestPrintCommand = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/printer/status');
-      if (response.ok) {
-        const data = await response.json();
-        setStatus(data);
-        setError('');
-      } else {
-        setError('Failed to fetch printer status');
-      }
-    } catch (err) {
-      setError('Cannot connect to printer service');
-    } finally {
-      setLoading(false);
-    }
-  };
+      setError('');
 
-  const testPrint = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:3001/printer/test', {
-        method: 'POST'
+      const commandRef = doc(db, 'printer_commands', `test_print_${Date.now()}`);
+      await setDoc(commandRef, {
+        command_type: 'test',
+        created_at: new Date().toISOString(),
+        processed: false
       });
-      if (response.ok) {
-        alert('Test print sent to printer!');
-      } else {
-        setError('Test print failed');
-      }
+
+      alert('Test print command sent! Check printer in a few seconds.');
     } catch (err) {
-      setError('Failed to send test print');
+      setError('Failed to send test print command');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkPrinterStatus();
-    const interval = setInterval(checkPrinterStatus, 30000);
-    return () => clearInterval(interval);
+    const statusRef = doc(db, 'printer_status', 'current');
+
+    const unsubscribe = onSnapshot(
+      statusRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setStatus({
+            connected: data.connected || false,
+            connection_type: data.connection_type || 'usb',
+            last_update: data.last_update || new Date().toISOString(),
+            queue_size: data.queue_size || 0
+          });
+          setError('');
+        } else {
+          setStatus(null);
+          setError('Printer status not available yet');
+        }
+      },
+      (err) => {
+        console.error('Error listening to printer status:', err);
+        setError('Failed to connect to printer status updates');
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -61,13 +72,7 @@ export const PrinterStatus: React.FC = () => {
           <Printer className="w-5 h-5 text-gray-700" />
           <h3 className="font-semibold text-gray-900">Printer Status</h3>
         </div>
-        <button
-          onClick={checkPrinterStatus}
-          disabled={loading}
-          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        <span className="text-xs text-gray-500">Real-time</span>
       </div>
 
       {error && (
@@ -80,7 +85,7 @@ export const PrinterStatus: React.FC = () => {
       {status && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            {status.isConnected ? (
+            {status.connected ? (
               <>
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <span className="text-sm text-green-700 font-medium">Connected</span>
@@ -95,17 +100,20 @@ export const PrinterStatus: React.FC = () => {
 
           <div className="text-sm text-gray-600 bg-gray-50 rounded p-2 space-y-1">
             <p>
-              <span className="font-medium">Type:</span> {status.type}
+              <span className="font-medium">Type:</span> {status.connection_type}
             </p>
             <p>
-              <span className="font-medium">Last Check:</span>{' '}
-              {new Date(status.timestamp).toLocaleTimeString('de-DE')}
+              <span className="font-medium">Queue:</span> {status.queue_size || 0} order(s)
+            </p>
+            <p>
+              <span className="font-medium">Last Update:</span>{' '}
+              {new Date(status.last_update).toLocaleTimeString('de-DE')}
             </p>
           </div>
 
-          {status.isConnected && (
+          {status.connected && (
             <button
-              onClick={testPrint}
+              onClick={sendTestPrintCommand}
               disabled={loading}
               className="w-full px-3 py-2 text-sm rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium border border-orange-200"
             >

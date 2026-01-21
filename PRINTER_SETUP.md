@@ -1,5 +1,19 @@
 # Automatic Thermal Receipt Printing Setup Guide
 
+## System Constraints
+
+**DATABASE**: This system uses **Firebase Firestore exclusively** for all data persistence and real-time communication. No alternative databases are considered.
+
+**ARCHITECTURE**:
+- Frontend deployed on Netlify (cloud)
+- Printer backend runs on Raspberry Pi (local store)
+- All communication flows through Firebase (real-time, not polling)
+- Single USB printer per location only
+
+**COMMUNICATION**: Real-time Firebase listeners enable instant order printing and status updates. There are NO direct HTTP calls between Netlify and the Raspberry Pi.
+
+---
+
 This guide explains how to set up automatic receipt printing on an Epson TM-T20IV thermal printer connected to a Raspberry Pi.
 
 ## Overview
@@ -91,26 +105,17 @@ sudo systemctl enable saray-printer.service
 sudo systemctl start saray-printer.service
 ```
 
-### Step 5: Update Frontend Configuration (If Needed)
+### Step 5: Frontend Configuration (Firebase Only)
 
-If your Raspberry Pi has a different IP address than localhost, update the backend URL in:
+The frontend no longer makes direct HTTP calls to the Raspberry Pi. All communication flows through Firebase Firestore:
 
-**File**: `src/services/FirebaseService.ts`
+- **Printer status**: Real-time listener on `printer_status` document
+- **Reprint commands**: Writes to `printer_commands` collection
+- **Test prints**: Commands via Firebase, not HTTP endpoints
 
-Change:
-```typescript
-const apiUrl = `http://localhost:3001/orders/${orderId}/reprint`;
-```
+No additional frontend configuration is needed beyond Firebase credentials in `.env`.
 
-To:
-```typescript
-const apiUrl = `http://192.168.x.x:3001/orders/${orderId}/reprint`;
-```
-
-Then rebuild:
-```bash
-npm run build
-```
+See ARCHITECTURE.md for complete communication flow details.
 
 ## Admin Features
 
@@ -133,56 +138,57 @@ Each order in the history shows:
 
 Click the printer icon on any order to manually send it to print again.
 
-## API Endpoints
+## Real-Time Firebase Communication
 
-The Raspberry Pi backend provides these endpoints:
+The system now uses Firebase Firestore for all frontend-backend communication (replacing direct HTTP calls).
 
-### Get Health Status
+### Printer Status (Real-Time)
+Frontend listens to: `printer_status/current` document
+
+Response:
+```json
+{
+  "connected": true,
+  "connection_type": "usb",
+  "last_update": "2024-01-21T12:30:45.123Z",
+  "queue_size": 0,
+  "total_printed_count": 145
+}
+```
+
+### Commands (Firebase Collections)
+
+**Reprint Command**:
+```json
+{
+  "command_type": "reprint",
+  "order_id": "order123",
+  "created_at": "2024-01-21T12:30:45.123Z",
+  "processed": false
+}
+```
+
+**Test Print Command**:
+```json
+{
+  "command_type": "test",
+  "created_at": "2024-01-21T12:30:45.123Z",
+  "processed": false
+}
+```
+
+### Local Debugging (HTTP Endpoints)
+
+For local network debugging only:
+
+**Get Health Status**:
 ```
 GET http://localhost:3001/health
 ```
 
-### Check Printer Status
+**Check Printer Status** (local debugging):
 ```
 GET http://localhost:3001/printer/status
-```
-
-Response:
-```json
-{
-  "isConnected": true,
-  "type": "usb",
-  "timestamp": "2024-01-21T12:30:45.123Z"
-}
-```
-
-### Connect to Printer
-```
-POST http://localhost:3001/printer/connect
-```
-
-### Send Test Print
-```
-POST http://localhost:3001/printer/test
-```
-
-### Reprint an Order
-```
-POST http://localhost:3001/orders/{orderId}/reprint
-```
-
-### Check Print Queue Status
-```
-GET http://localhost:3001/queue/status
-```
-
-Response:
-```json
-{
-  "queueSize": 2,
-  "isPrinting": false,
-  "printedOrdersCount": 145
-}
 ```
 
 ## Firebase Database Schema
@@ -238,10 +244,11 @@ The system tracks printed orders to prevent:
 ### Printer Not Printing
 
 1. Check printer is powered on and paper loaded
-2. Verify USB/Serial connection
-3. Run diagnostic:
+2. Verify USB/Serial connection is secure
+3. Check Firebase has printer_status document with `connected: true`
+4. Run local diagnostic (on Raspberry Pi):
    ```bash
-   curl http://localhost:3001/printer/status
+   curl http://localhost:3001/health
    ```
 
 ### "Connection Refused" Error
@@ -288,10 +295,12 @@ sudo journalctl -u saray-printer.service -n 100 -f
 
 ### Check Queue Status
 
-Orders waiting to print:
-```bash
-curl http://localhost:3001/queue/status
-```
+Queue status is updated in real-time in the Firebase `printer_status/current` document:
+- `queue_size`: Orders waiting to print
+- `connected`: Printer connection status
+- `last_update`: Last status update timestamp
+
+Check in Firebase Console or through frontend admin dashboard.
 
 ### Monitor CPU/Memory
 

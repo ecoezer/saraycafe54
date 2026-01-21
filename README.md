@@ -13,13 +13,35 @@ A modern food delivery website for Saray Kebap Café54 with WhatsApp ordering an
 - 🚚 Delivery zone management with minimum order requirements
 - 🎨 Modern UI with smooth animations
 
+## Architecture Constraints
+
+### Database: Firebase Only
+This project uses **Firebase Firestore exclusively**. No alternative databases (Supabase, MongoDB, PostgreSQL, etc.) are considered for this application. Firebase is the permanent, non-negotiable database layer for all data persistence.
+
+### System Topology
+- **Frontend**: Deployed on Netlify (cloud)
+- **Database**: Firebase Firestore (cloud)
+- **Printer Backend**: Runs on Raspberry Pi (local store)
+- **Printer**: USB-connected thermal printer at store location
+
+### Real-Time Communication
+- All communication between frontend and Raspberry Pi goes through Firebase
+- Real-time listeners (not polling) for instant updates
+- No direct HTTP calls from Netlify to local Raspberry Pi
+
+For complete architecture details, see [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+---
+
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand
 - **Forms**: React Hook Form + Zod validation
-- **Backend**: Firebase Firestore
+- **Database**: Firebase Firestore (permanent, exclusive)
+- **Printer Backend**: Node.js on Raspberry Pi
+- **Printer Communication**: Real-time Firebase listeners
 - **Icons**: Lucide React
 
 ## Setup Instructions

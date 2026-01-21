@@ -14,6 +14,8 @@ export class OrderMonitor {
   start() {
     console.log('Starting order monitor...');
     this.setupRealtimeListener();
+    this.setupCommandListener();
+    this.startStatusUpdates();
   }
 
   setupRealtimeListener() {
@@ -125,6 +127,63 @@ export class OrderMonitor {
         console.error(`Failed to print order ${order.id} after ${this.maxRetries} retries`);
       }
     }
+  }
+
+  setupCommandListener() {
+    console.log('Setting up Firebase command listener...');
+    db.collection('printer_commands')
+      .where('processed', '==', false)
+      .onSnapshot(
+        async (snapshot) => {
+          snapshot.docChanges().forEach(async (change) => {
+            if (change.type === 'added') {
+              const command = {
+                id: change.doc.id,
+                ...change.doc.data()
+              };
+
+              console.log(`Received command: ${command.command_type}`);
+
+              try {
+                if (command.command_type === 'reprint' && command.order_id) {
+                  await this.reprintOrder(command.order_id);
+                } else if (command.command_type === 'test') {
+                  await this.printerManager.testPrint();
+                }
+
+                await db.collection('printer_commands').doc(command.id).update({
+                  processed: true,
+                  processed_at: new Date()
+                });
+              } catch (error) {
+                console.error(`Error processing command ${command.id}:`, error.message);
+              }
+            }
+          });
+        },
+        (error) => {
+          console.error('Error listening to commands:', error);
+          setTimeout(() => this.setupCommandListener(), 5000);
+        }
+      );
+  }
+
+  startStatusUpdates() {
+    console.log('Starting periodic status updates to Firebase...');
+    setInterval(async () => {
+      try {
+        const status = this.printerManager.getStatus();
+        await db.collection('printer_status').doc('current').set({
+          connected: status.isConnected,
+          connection_type: status.type,
+          last_update: new Date().toISOString(),
+          queue_size: this.printQueue.length,
+          total_printed_count: this.printedOrders.size
+        });
+      } catch (error) {
+        console.error('Error updating printer status to Firebase:', error.message);
+      }
+    }, 10000);
   }
 
   async reprintOrder(orderId) {

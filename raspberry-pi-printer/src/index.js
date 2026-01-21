@@ -54,58 +54,6 @@ app.get('/printer/status', (req, res) => {
   res.json(printerManager.getStatus());
 });
 
-app.post('/printer/connect', async (req, res) => {
-  try {
-    if (!printerManager) {
-      printerManager = new PrinterManager();
-    }
-
-    await printerManager.connect();
-    res.json({ success: true, status: printerManager.getStatus() });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/printer/test', async (req, res) => {
-  try {
-    if (!printerManager || !printerManager.isConnected) {
-      return res.status(503).json({ error: 'Printer not connected' });
-    }
-
-    await printerManager.testPrint();
-    res.json({ success: true, message: 'Test print sent to printer' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/orders/:orderId/reprint', async (req, res) => {
-  try {
-    if (!orderMonitor) {
-      return res.status(503).json({ error: 'Order monitor not initialized' });
-    }
-
-    const { orderId } = req.params;
-    await orderMonitor.reprintOrder(orderId);
-
-    res.json({ success: true, message: `Order ${orderId} sent to printer` });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/queue/status', (req, res) => {
-  if (!orderMonitor) {
-    return res.status(503).json({ error: 'Order monitor not initialized' });
-  }
-
-  res.json({
-    queueSize: orderMonitor.printQueue.length,
-    isPrinting: orderMonitor.isPrinting,
-    printedOrdersCount: orderMonitor.printedOrders.size
-  });
-});
 
 app.use((err, req, res, next) => {
   console.error('Error:', err);

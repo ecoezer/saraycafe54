@@ -125,12 +125,16 @@ export class FirebaseService {
 
   static async reprintOrder(orderId: string): Promise<void> {
     try {
-      await fetch(`http://localhost:3001/orders/${orderId}/reprint`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      const { setDoc, doc } = await import('firebase/firestore');
+      const commandRef = doc(db, 'printer_commands', `reprint_${orderId}_${Date.now()}`);
+      await setDoc(commandRef, {
+        command_type: 'reprint',
+        order_id: orderId,
+        created_at: new Date().toISOString(),
+        processed: false
       });
     } catch (error) {
-      console.error('Error sending reprint request:', error);
+      console.error('Error sending reprint command:', error);
       throw error;
     }
   }
