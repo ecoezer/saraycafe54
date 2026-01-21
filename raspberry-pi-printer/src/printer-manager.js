@@ -99,7 +99,7 @@ export class PrinterManager {
     });
   }
 
-  async printReceipt(receiptText) {
+  async printReceipt(receiptText, boldLines = new Set()) {
     let printSuccess = false;
 
     try {
@@ -115,10 +115,18 @@ export class PrinterManager {
             reject(new Error('Print operation timed out'));
           }, this.connectionTimeout);
 
-          this.printer
-            .align('ct')
-            .text('')
-            .text(receiptText)
+          const lines = receiptText.split('\n');
+          const printChain = this.printer.align('ct').text('');
+
+          lines.forEach((line, index) => {
+            if (boldLines.has(index)) {
+              printChain.bold(true).text(line).bold(false);
+            } else {
+              printChain.text(line);
+            }
+          });
+
+          printChain
             .text('')
             .cut()
             .execute(() => {

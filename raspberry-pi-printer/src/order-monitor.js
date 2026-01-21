@@ -136,8 +136,9 @@ export class OrderMonitor {
 
       const formatter = new ReceiptFormatter();
       const receiptText = formatter.formatReceipt(order);
+      const boldLines = formatter.boldLines;
 
-      await this.printerManager.printReceipt(receiptText);
+      await this.printerManager.printReceipt(receiptText, boldLines);
 
       await db.collection('orders').doc(order.id).update({
         printed: true,

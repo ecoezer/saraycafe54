@@ -2,9 +2,10 @@ export class ReceiptFormatter {
   constructor(width = 42) {
     this.width = width;
     this.lines = [];
+    this.boldLines = new Set();
   }
 
-  addLine(text = '', align = 'left') {
+  addLine(text = '', align = 'center', isBold = false) {
     if (!text) {
       this.lines.push('');
       return;
@@ -14,12 +15,17 @@ export class ReceiptFormatter {
 
     if (align === 'center') {
       const spaces = Math.max(0, Math.floor((this.width - trimmed.length) / 2));
-      this.lines.push(' '.repeat(spaces) + trimmed);
+      const line = ' '.repeat(spaces) + trimmed;
+      this.lines.push(line);
     } else if (align === 'right') {
       const spaces = Math.max(0, this.width - trimmed.length);
       this.lines.push(' '.repeat(spaces) + trimmed);
     } else {
       this.lines.push(trimmed);
+    }
+
+    if (isBold) {
+      this.boldLines.add(this.lines.length - 1);
     }
   }
 
@@ -27,113 +33,105 @@ export class ReceiptFormatter {
     this.lines.push(char.repeat(this.width));
   }
 
-  addColumns(col1, col2, col3 = null) {
-    if (col3) {
-      const c1 = col1.substring(0, 12).padEnd(12);
-      const c2 = col2.substring(0, 15).padEnd(15);
-      const c3 = col3.substring(0, 15);
-      this.lines.push((c1 + c2 + c3).substring(0, this.width));
-    } else {
-      const c1 = col1.substring(0, 25).padEnd(25);
-      const c2 = col2.substring(0, 17);
-      this.lines.push((c1 + c2).substring(0, this.width));
-    }
-  }
-
   formatReceipt(order) {
     this.lines = [];
+    this.boldLines = new Set();
 
     this.addLine('', 'center');
-    this.addLine('SARAY KEBAP CAFE 54', 'center');
+    this.addLine('SARAY KEBAP CAFE 54', 'center', true);
     this.addLine('', 'center');
     this.addSeparator('=');
 
-    this.addLine('Order #' + order.id?.substring(0, 8).toUpperCase(), 'center');
+    this.addLine('Bestellung #' + order.id?.substring(0, 8).toUpperCase(), 'center', true);
 
     const date = this.formatDate(order.created_at);
     this.addLine(date, 'center');
     this.addSeparator('=');
 
     this.addLine('');
-    this.addLine('CUSTOMER INFO:');
-    this.addLine(order.customer_name);
-    this.addLine('Tel: ' + order.customer_phone);
+    this.addLine('KUNDENINFORMATION:', 'center', true);
+    this.addLine(order.customer_name, 'center', true);
+    this.addLine('Tel: ' + order.customer_phone, 'center', true);
     this.addLine('');
-    this.addLine('DELIVERY ADDRESS:');
-    this.addWrappedLines(order.delivery_address, this.width - 2);
+    this.addLine('LIEFERADRESSE:', 'center', true);
+    this.addWrappedLines(order.delivery_address, this.width - 2, true);
 
     this.addLine('');
     this.addSeparator('-');
     this.addLine('');
 
-    this.addLine('ITEMS:', 'left');
+    this.addLine('ARTIKEL:', 'center', true);
     this.addLine('');
 
     for (const item of order.items) {
       const itemLine = `${item.quantity}x Nr.${item.menuItemNumber} ${item.name}`;
-      this.addWrappedLines(itemLine, this.width - 2);
+      this.addWrappedLines(itemLine, this.width - 2, false);
 
       const priceStr = item.totalPrice.toFixed(2).replace('.', ',') + ' EUR';
-      const price = '  ' + priceStr;
-      this.lines[this.lines.length - 1] += ' '.repeat(
+      this.lines[this.lines.length - 1] = this.lines[this.lines.length - 1] + ' '.repeat(
         Math.max(0, this.width - this.lines[this.lines.length - 1].length - priceStr.length)
       ) + priceStr;
 
       if (item.selectedSize) {
-        this.addLine('  Size: ' + item.selectedSize.name);
+        this.addLine('  Größe: ' + item.selectedSize.name, 'left');
       }
       if (item.selectedPastaType) {
-        this.addLine('  Pasta: ' + item.selectedPastaType);
+        this.addLine('  Pasta: ' + item.selectedPastaType, 'left');
       }
       if (item.selectedSauce) {
-        this.addLine('  Sauce: ' + item.selectedSauce);
+        this.addLine('  Soße: ' + item.selectedSauce, 'left');
       }
       if (item.selectedSideDish) {
-        this.addLine('  Side: ' + item.selectedSideDish);
+        this.addLine('  Beilage: ' + item.selectedSideDish, 'left');
       }
       if (item.selectedIngredients?.length > 0) {
-        this.addLine('  + ' + item.selectedIngredients.join(', '));
+        for (const ingredient of item.selectedIngredients) {
+          this.addLine('  + ' + ingredient, 'left');
+        }
       }
       if (item.selectedExtras?.length > 0) {
-        this.addLine('  + ' + item.selectedExtras.join(', '));
+        for (const extra of item.selectedExtras) {
+          this.addLine('  + ' + extra, 'left');
+        }
       }
       if (item.selectedExclusions?.length > 0) {
-        this.addLine('  - ' + item.selectedExclusions.join(', '));
+        for (const exclusion of item.selectedExclusions) {
+          this.addLine('  - ' + exclusion, 'left');
+        }
       }
       this.addLine('');
     }
 
     if (order.notes) {
       this.addSeparator('-');
-      this.addLine('NOTES:');
-      this.addWrappedLines(order.notes, this.width - 2);
+      this.addLine('NOTIZEN:', 'center', true);
+      this.addWrappedLines(order.notes, this.width - 2, false);
       this.addLine('');
     }
 
     this.addSeparator('=');
     this.addLine('');
 
-    const totalStr = 'TOTAL: ' + order.total_amount.toFixed(2).replace('.', ',') + ' EUR';
-    this.addLine(totalStr, 'center');
+    const totalStr = 'GESAMT: ' + order.total_amount.toFixed(2).replace('.', ',') + ' EUR';
+    this.addLine(totalStr, 'center', true);
 
     this.addLine('');
-    this.addLine('Thank you for your order!', 'center');
-    this.addLine('Vielen Dank!', 'center');
-    this.addLine('');
+    this.addLine('Danke für Ihre Bestellung!', 'center');
+    this.addLine('', 'center');
     this.addSeparator('=');
     this.addLine('');
 
     return this.lines.join('\n');
   }
 
-  addWrappedLines(text, maxWidth) {
+  addWrappedLines(text, maxWidth, isBold = false) {
     const words = text.split(' ');
     let currentLine = '  ';
 
     for (const word of words) {
       if ((currentLine + word).length > maxWidth) {
         if (currentLine.trim()) {
-          this.addLine(currentLine);
+          this.addLine(currentLine, 'left', isBold);
         }
         currentLine = '  ' + word;
       } else {
@@ -142,7 +140,7 @@ export class ReceiptFormatter {
     }
 
     if (currentLine.trim()) {
-      this.addLine(currentLine);
+      this.addLine(currentLine, 'left', isBold);
     }
   }
 
