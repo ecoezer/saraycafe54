@@ -1,7 +1,7 @@
 import Escpos from 'escpos';
 import dotenv from 'dotenv';
 import usb from 'usb';
-import SerialPort from 'serialport';
+import { SerialPort } from 'serialport';
 
 dotenv.config();
 
@@ -30,13 +30,15 @@ export class PrinterManager {
   connectUSB() {
     return new Promise((resolve, reject) => {
       try {
-        const device = usb.findByIds(
-          parseInt(process.env.PRINTER_VENDOR_ID || '0x04b8', 16),
-          parseInt(process.env.PRINTER_PRODUCT_ID || '0x0202', 16)
-        );
+        const vendorId = parseInt(process.env.PRINTER_VENDOR_ID || '0x04b8', 16);
+        const productId = parseInt(process.env.PRINTER_PRODUCT_ID || '0x0202', 16);
+
+        console.log(`Searching for USB printer: VID=${vendorId.toString(16)}, PID=${productId.toString(16)}`);
+
+        const device = usb.findByIds(vendorId, productId);
 
         if (!device) {
-          reject(new Error('Epson TM-T20IV printer not found on USB'));
+          reject(new Error(`Epson TM-T20IV printer not found on USB (VID:${vendorId.toString(16)}, PID:${productId.toString(16)})`));
           return;
         }
 
@@ -48,6 +50,7 @@ export class PrinterManager {
         this.printer = new Escpos.USB(device, options);
         this.printer.open((error) => {
           if (error) {
+            console.error('USB device open error:', error);
             reject(new Error('Failed to open USB printer: ' + error.message));
           } else {
             this.isConnected = true;
@@ -56,6 +59,7 @@ export class PrinterManager {
           }
         });
       } catch (error) {
+        console.error('USB connection error:', error);
         reject(error);
       }
     });
@@ -64,7 +68,7 @@ export class PrinterManager {
   connectSerial() {
     return new Promise((resolve, reject) => {
       try {
-        const port = new SerialPort.SerialPort({
+        const port = new SerialPort({
           path: process.env.PRINTER_SERIAL_PORT || '/dev/ttyUSB0',
           baudRate: parseInt(process.env.PRINTER_BAUD_RATE) || 9600,
           dataBits: 8,
@@ -225,7 +229,9 @@ Test successful!
   disconnect() {
     if (this.printer) {
       try {
-        this.printer.close();
+        if (this.printer.close && typeof this.printer.close === 'function') {
+          this.printer.close();
+        }
         this.isConnected = false;
         this.printer = null;
         console.log('Printer disconnected');
