@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Clock, Phone, MapPin, Package, LogOut, RefreshCw, Monitor, Smartphone, Calendar, Trash2 } from 'lucide-react';
+import { ShoppingBag, Clock, Phone, MapPin, Package, LogOut, RefreshCw, Monitor, Smartphone, Calendar, Trash2, BarChart3 } from 'lucide-react';
 import { fetchOrders, deleteOrder, OrderData } from '../services/orderService';
 
 interface AdminOrderHistoryProps {
   onLogout: () => void;
+  onViewAnalytics?: () => void;
 }
 
 type TimeFilter = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
 
-const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
+const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewAnalytics }) => {
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<OrderData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -164,24 +165,33 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
   const totalAmount = filteredOrders.reduce((sum, order) => sum + order.total_amount, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow sticky top-0 z-10 border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-light-blue-600" />
+    <div className="min-h-screen bg-white">
+      <div className="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <ShoppingBag className="w-6 h-6 text-orange-500" />
             Order History
           </h1>
           <div className="flex items-center gap-2">
+            {onViewAnalytics && (
+              <button
+                onClick={onViewAnalytics}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors font-medium border border-orange-200"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </button>
+            )}
             <button
               onClick={loadOrders}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-light-blue-100 text-light-blue-700 hover:bg-light-blue-200 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors font-medium border border-orange-200"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
             </button>
             <button
               onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors font-medium border border-red-200"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -190,64 +200,64 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
-          <div className="flex flex-wrap gap-1.5 mb-3">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={() => setTimeFilter('all')}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
                 timeFilter === 'all'
-                  ? 'bg-light-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-orange-500 text-white border border-orange-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
             >
               All
             </button>
             <button
               onClick={() => setTimeFilter('today')}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
                 timeFilter === 'today'
-                  ? 'bg-light-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-orange-500 text-white border border-orange-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
             >
               Today
             </button>
             <button
               onClick={() => setTimeFilter('week')}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
                 timeFilter === 'week'
-                  ? 'bg-light-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-orange-500 text-white border border-orange-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
             >
               Week
             </button>
             <button
               onClick={() => setTimeFilter('month')}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
                 timeFilter === 'month'
-                  ? 'bg-light-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-orange-500 text-white border border-orange-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
             >
               Month
             </button>
             <button
               onClick={() => setTimeFilter('year')}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
                 timeFilter === 'year'
-                  ? 'bg-light-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-orange-500 text-white border border-orange-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
             >
               Year
             </button>
           </div>
 
-          <div className="border-t pt-3 mt-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Calendar className="w-4 h-4 text-light-blue-600" />
+          <div className="border-t border-gray-300 pt-4 mt-4">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Calendar className="w-4 h-4 text-orange-500" />
               <h3 className="text-sm font-semibold text-gray-900">Custom Range</h3>
             </div>
             <div className="flex flex-wrap gap-2 items-end">
@@ -260,7 +270,7 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
                   min={minDate}
                   max={maxDate}
                   disabled={!minDate || !maxDate}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-light-blue-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="flex-1 min-w-[140px]">
@@ -272,52 +282,52 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
                   min={customStartDate || minDate}
                   max={maxDate}
                   disabled={!minDate || !maxDate}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-light-blue-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
               <button
                 onClick={handleCustomDateApply}
                 disabled={!customStartDate || !customEndDate}
-                className="px-4 py-1.5 text-sm rounded-md bg-light-blue-500 text-white hover:bg-light-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                className="px-4 py-2 text-sm rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
               >
                 Apply
               </button>
             </div>
           </div>
 
-          <div className="border-t pt-3 mt-3">
+          <div className="border-t border-gray-300 pt-4 mt-4">
             <div className="flex justify-between items-center text-sm">
               <p className="font-semibold text-gray-900">
-                Orders: <span className="text-light-blue-600">{filteredOrders.length}</span>
+                Orders: <span className="text-orange-600 font-bold">{filteredOrders.length}</span>
               </p>
               <p className="font-semibold text-gray-900">
-                Revenue: <span className="text-light-blue-600">{totalAmount.toFixed(2).replace('.', ',')} €</span>
+                Revenue: <span className="text-green-600 font-bold">{totalAmount.toFixed(2).replace('.', ',')} €</span>
               </p>
             </div>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-light-blue-500"></div>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
             <p className="text-sm text-red-700">{error}</p>
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <ShoppingBag className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-            <p className="text-sm text-gray-600">No orders found</p>
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-12 text-center">
+            <ShoppingBag className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-600">No orders found</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filteredOrders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow relative">
+              <div key={order.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                 <button
                   onClick={() => handleDeleteOrder(order.id!)}
                   disabled={deletingOrderId === order.id}
-                  className="absolute top-3 right-3 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute top-4 right-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
                   title="Bestellung löschen"
                 >
                   {deletingOrderId === order.id ? (
@@ -327,26 +337,28 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
                   )}
                 </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10">
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Clock className="w-3.5 h-3.5" />
-                        {formatDate(order.created_at)}
-                      </div>
-                      <div className="text-sm font-bold text-light-blue-600">
-                        {order.total_amount.toFixed(2).replace('.', ',')} €
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
+                  <div className="md:col-span-2 p-4 border-b md:border-b-0 md:border-r border-gray-200 space-y-3">
+                    <div className="flex items-start justify-between pr-8">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Clock className="w-3.5 h-3.5" />
+                          {formatDate(order.created_at)}
+                        </div>
+                        <div className="text-base font-bold text-green-600">
+                          {order.total_amount.toFixed(2).replace('.', ',')} €
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-1.5">
-                        <Package className="w-4 h-4 text-light-blue-600" />
+                        <Package className="w-4 h-4 text-orange-500" />
                         <span className="font-semibold text-sm text-gray-900">{order.customer_name}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-gray-700">
                         <Phone className="w-3.5 h-3.5" />
-                        <a href={`tel:${order.customer_phone}`} className="hover:text-light-blue-600">
+                        <a href={`tel:${order.customer_phone}`} className="hover:text-orange-600 transition-colors">
                           {order.customer_phone}
                         </a>
                       </div>
@@ -357,7 +369,7 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
                     </div>
 
                     {(order.device_type || order.ip_address || order.browser_info) && (
-                      <div className="bg-gray-50 rounded px-2 py-1.5 space-y-1">
+                      <div className="bg-gray-50 rounded border border-gray-200 px-3 py-2 space-y-1">
                         {order.device_type && (
                           <div className="flex items-center gap-1.5 text-xs text-gray-600">
                             {order.device_type === 'Mobile' || order.device_type === 'Tablet' ? (
@@ -385,7 +397,7 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
                     )}
 
                     {order.notes && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
+                      <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2">
                         <p className="text-xs text-gray-700">
                           <span className="font-medium">Note:</span> {order.notes}
                         </p>
@@ -393,48 +405,45 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout }) => {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  <div className="md:col-span-3 p-4 space-y-2">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items</h4>
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
                       {order.items.map((item, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded p-2">
-                          <div className="flex justify-between items-start gap-2">
+                        <div key={idx} className="bg-gray-50 rounded border border-gray-100 p-2.5 hover:border-gray-200 transition-colors">
+                          <div className="flex justify-between items-start gap-2 mb-1">
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm text-gray-900">
                                 {item.quantity}x Nr.{item.menuItemNumber} {item.name}
                               </p>
-                              {item.selectedSize && (
-                                <p className="text-xs text-gray-600 truncate">
-                                  {item.selectedSize.name}
-                                </p>
-                              )}
-                              {item.selectedPastaType && (
-                                <p className="text-xs text-gray-600">Pasta: {item.selectedPastaType}</p>
-                              )}
-                              {item.selectedSauce && (
-                                <p className="text-xs text-gray-600">Sauce: {item.selectedSauce}</p>
-                              )}
-                              {item.selectedSideDish && (
-                                <p className="text-xs text-gray-600">Side: {item.selectedSideDish}</p>
-                              )}
-                              {item.selectedIngredients && item.selectedIngredients.length > 0 && (
-                                <p className="text-xs text-gray-600">
-                                  {item.selectedIngredients.join(', ')}
-                                </p>
-                              )}
-                              {item.selectedExtras && item.selectedExtras.length > 0 && (
-                                <p className="text-xs text-gray-600">+ {item.selectedExtras.join(', ')}</p>
-                              )}
-                              {item.selectedExclusions && item.selectedExclusions.length > 0 && (
-                                <p className="text-xs text-gray-600">
-                                  - {item.selectedExclusions.join(', ')}
-                                </p>
-                              )}
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="font-semibold text-sm text-light-blue-600">
+                              <p className="font-semibold text-sm text-green-600">
                                 {item.totalPrice.toFixed(2).replace('.', ',')} €
                               </p>
                             </div>
+                          </div>
+                          <div className="space-y-0.5 text-xs text-gray-600">
+                            {item.selectedSize && (
+                              <p className="truncate">{item.selectedSize.name}</p>
+                            )}
+                            {item.selectedPastaType && (
+                              <p>Pasta: {item.selectedPastaType}</p>
+                            )}
+                            {item.selectedSauce && (
+                              <p>Sauce: {item.selectedSauce}</p>
+                            )}
+                            {item.selectedSideDish && (
+                              <p>Side: {item.selectedSideDish}</p>
+                            )}
+                            {item.selectedIngredients && item.selectedIngredients.length > 0 && (
+                              <p>{item.selectedIngredients.join(', ')}</p>
+                            )}
+                            {item.selectedExtras && item.selectedExtras.length > 0 && (
+                              <p className="text-green-700">+ {item.selectedExtras.join(', ')}</p>
+                            )}
+                            {item.selectedExclusions && item.selectedExclusions.length > 0 && (
+                              <p className="text-red-700">- {item.selectedExclusions.join(', ')}</p>
+                            )}
                           </div>
                         </div>
                       ))}
