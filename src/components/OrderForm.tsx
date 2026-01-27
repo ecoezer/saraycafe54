@@ -2,41 +2,18 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash2, Plus, Minus, ShoppingCart, Clock, MapPin, Phone } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { saveOrder } from '../services/orderService';
 import { PriceService } from '../services/PriceService';
 import { DELIVERY_ZONES } from '../constants/deliveryZones';
+import { CartItem, CartSummary, CartItemData } from './cart';
 
-interface OrderItem {
-  menuItem: {
-    id: number;
-    name: string;
-    price: number;
-    number: string | number;
-    isPizza?: boolean;
-    isCalzone?: boolean;
-    pfand?: number;
-  };
-  quantity: number;
-  selectedSize?: {
-    name: string;
-    description?: string;
-    price?: number;
-  };
-  selectedIngredients?: string[];
-  selectedExtras?: string[];
-  selectedPastaType?: string;
-  selectedSauce?: string;
-  selectedPizzaSauces?: string[];
-  selectedCalzoneSauces?: string[];
-  selectedExclusions?: string[];
-  selectedSideDish?: string;
-}
+import { OrderItem } from '../types';
 
 interface OrderFormProps {
   orderItems: OrderItem[];
-  onRemoveItem: (id: number, selectedSize?: any, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => void;
-  onUpdateQuantity: (id: number, quantity: number, selectedSize?: any, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => void;
+  onRemoveItem: (cartItemId: string) => void;
+  onUpdateQuantity: (cartItemId: string, quantity: number) => void;
   onClearCart: () => void;
   onCloseMobileCart?: () => void;
   hideTitle?: boolean;
@@ -75,10 +52,10 @@ const orderSchema = z.object({
 
 type OrderFormData = z.infer<typeof orderSchema>;
 
-const OrderForm: React.FC<OrderFormProps> = ({ 
-  orderItems, 
-  onRemoveItem, 
-  onUpdateQuantity, 
+const OrderForm: React.FC<OrderFormProps> = ({
+  orderItems,
+  onRemoveItem,
+  onUpdateQuantity,
   onClearCart,
   onCloseMobileCart,
   hideTitle = false
@@ -92,7 +69,6 @@ const OrderForm: React.FC<OrderFormProps> = ({
     handleSubmit,
     watch,
     formState: { errors },
-    setValue,
     reset
   } = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
@@ -262,7 +238,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
     }
 
     return encodeURIComponent(message);
-  }, [orderItems, subtotal, deliveryFee, total]);
+  }, [orderItems, subtotal, deliveryFee, total, calculateItemPrice, pfand]);
 
 
   const onSubmit = async (data: OrderFormData) => {
@@ -285,16 +261,16 @@ const OrderForm: React.FC<OrderFormProps> = ({
           menuItemNumber: item.menuItem.number,
           name: item.menuItem.name,
           quantity: item.quantity,
-          basePrice: item.selectedSize ? item.selectedSize.price : item.menuItem.price,
-          selectedSize: item.selectedSize || null,
-          selectedIngredients: item.selectedIngredients || null,
-          selectedExtras: item.selectedExtras || null,
-          selectedPastaType: item.selectedPastaType || null,
-          selectedSauce: item.selectedSauce || null,
-          selectedPizzaSauces: item.selectedPizzaSauces || null,
-          selectedCalzoneSauces: item.selectedCalzoneSauces || null,
-          selectedExclusions: item.selectedExclusions || null,
-          selectedSideDish: item.selectedSideDish || null,
+          basePrice: item.selectedSize ? (item.selectedSize.price || 0) : item.menuItem.price,
+          selectedSize: item.selectedSize || undefined,
+          selectedIngredients: item.selectedIngredients || undefined,
+          selectedExtras: item.selectedExtras || undefined,
+          selectedPastaType: item.selectedPastaType || undefined,
+          selectedSauce: item.selectedSauce || undefined,
+          selectedPizzaSauces: item.selectedPizzaSauces || undefined,
+          selectedCalzoneSauces: item.selectedCalzoneSauces || undefined,
+          selectedExclusions: item.selectedExclusions || undefined,
+          selectedSideDish: item.selectedSideDish || undefined,
           totalPrice: calculateItemPrice(item) * item.quantity
         })),
         subtotal_amount: subtotal,
@@ -349,48 +325,14 @@ const OrderForm: React.FC<OrderFormProps> = ({
 
   const handleQuantityChange = useCallback((item: OrderItem, newQuantity: number) => {
     if (newQuantity <= 0) {
-      onRemoveItem(
-        item.menuItem.id,
-        item.selectedSize,
-        item.selectedIngredients,
-        item.selectedExtras,
-        item.selectedPastaType,
-        item.selectedSauce,
-        item.selectedExclusions,
-        item.selectedSideDish,
-        item.selectedPizzaSauces,
-        item.selectedCalzoneSauces
-      );
+      onRemoveItem(item.cartItemId);
     } else {
-      onUpdateQuantity(
-        item.menuItem.id,
-        newQuantity,
-        item.selectedSize,
-        item.selectedIngredients,
-        item.selectedExtras,
-        item.selectedPastaType,
-        item.selectedSauce,
-        item.selectedExclusions,
-        item.selectedSideDish,
-        item.selectedPizzaSauces,
-        item.selectedCalzoneSauces
-      );
+      onUpdateQuantity(item.cartItemId, newQuantity);
     }
   }, [onRemoveItem, onUpdateQuantity]);
 
   const handleRemoveItem = useCallback((item: OrderItem) => {
-    onRemoveItem(
-      item.menuItem.id,
-      item.selectedSize,
-      item.selectedIngredients,
-      item.selectedExtras,
-      item.selectedPastaType,
-      item.selectedSauce,
-      item.selectedExclusions,
-      item.selectedSideDish,
-      item.selectedPizzaSauces,
-      item.selectedCalzoneSauces
-    );
+    onRemoveItem(item.cartItemId);
   }, [onRemoveItem]);
 
   const handleClearCart = useCallback(() => {
@@ -411,10 +353,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
   // Determine which items to show
   const shouldCollapse = orderItems.length > 2 && !hideTitle; // Only collapse on desktop (when hideTitle is false)
   const itemsToShow = shouldCollapse && !showAllItems ? orderItems.slice(0, 2) : orderItems;
-  
+
   // Calculate total items count (including quantities)
   const totalItemsCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-  const visibleItemsCount = shouldCollapse && !showAllItems 
+  const visibleItemsCount = shouldCollapse && !showAllItems
     ? itemsToShow.reduce((sum, item) => sum + item.quantity, 0)
     : totalItemsCount;
   const hiddenItemsCount = shouldCollapse && !showAllItems ? totalItemsCount - visibleItemsCount : 0;
@@ -469,130 +411,13 @@ const OrderForm: React.FC<OrderFormProps> = ({
 
         <div className="space-y-3">
           {itemsToShow.map((item, index) => (
-            <div key={index} className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="space-y-3">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 text-sm leading-tight">
-                    Nr. {item.menuItem.number} {item.menuItem.name}
-                  </h4>
-                </div>
-
-                <div className="space-y-1.5">
-                  {item.selectedSize && (
-                    <div className="text-xs text-gray-600">
-                      {item.selectedSize.name}
-                    </div>
-                  )}
-
-                  {item.selectedPastaType && (
-                    <div className="text-xs text-gray-600">
-                      Pasta: {item.selectedPastaType}
-                    </div>
-                  )}
-
-                  {item.selectedSauce && (
-                    <div className="text-xs text-gray-600">
-                      Sauce: {item.selectedSauce}
-                    </div>
-                  )}
-
-                  {item.selectedPizzaSauces && item.selectedPizzaSauces.length > 0 && (
-                    <div className="text-xs text-gray-600">
-                      Soße: {item.selectedPizzaSauces.map((sauce, idx) => (
-                        <span key={idx}>
-                          {sauce}
-                          {idx === 0 && item.selectedPizzaSauces.length > 1 && <span className="text-green-600"> (kostenlos)</span>}
-                          {idx > 0 && <span className="text-gray-500"> (+1,00€)</span>}
-                          {idx < item.selectedPizzaSauces.length - 1 && ', '}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {item.selectedCalzoneSauces && item.selectedCalzoneSauces.length > 0 && (
-                    <div className="text-xs text-gray-600">
-                      Soße: {item.selectedCalzoneSauces.map((sauce, idx) => (
-                        <span key={idx}>
-                          {sauce}
-                          {idx === 0 && item.selectedCalzoneSauces.length > 1 && <span className="text-green-600"> (kostenlos)</span>}
-                          {idx > 0 && <span className="text-gray-500"> (+1,00€)</span>}
-                          {idx < item.selectedCalzoneSauces.length - 1 && ', '}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {item.selectedExclusions && item.selectedExclusions.length > 0 && (
-                    <div className="text-xs text-gray-600">
-                      Salat: {item.selectedExclusions.join(', ')}
-                    </div>
-                  )}
-
-                  {item.selectedSideDish && (
-                    <div className="text-xs text-gray-600">
-                      Beilage: {item.selectedSideDish}
-                    </div>
-                  )}
-
-                  {item.selectedIngredients && item.selectedIngredients.length > 0 && (
-                    <div className="text-xs text-gray-600">
-                      Zutaten: {item.selectedIngredients.join(', ')}
-                    </div>
-                  )}
-
-                  {item.selectedExtras && item.selectedExtras.length > 0 && (() => {
-                    const priceServiceItem = {
-                      menuItem: item.menuItem,
-                      quantity: item.quantity,
-                      selectedSize: item.selectedSize ? {
-                        name: item.selectedSize.name,
-                        price: item.selectedSize.price
-                      } : undefined,
-                      selectedExtras: item.selectedExtras || []
-                    };
-                    const extrasPrice = PriceService.calculateExtrasPrice(priceServiceItem);
-                    return (
-                      <div className="text-xs text-gray-600">
-                        Extras: {item.selectedExtras.join(', ')} (+{extrasPrice.toFixed(2).replace('.', ',')}€)
-                      </div>
-                    );
-                  })()}
-                </div>
-                
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                  <div className="text-base font-semibold text-gray-900">
-                    {(calculateItemPrice(item) * item.quantity).toFixed(2).replace('.', ',')} €
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center border border-gray-200 rounded-lg">
-                      <button
-                        onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                      >
-                        <Minus className="w-4 h-4 text-gray-600" />
-                      </button>
-
-                      <span className="w-8 text-center text-sm font-medium text-gray-900">{item.quantity}</span>
-
-                      <button
-                        onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                      >
-                        <Plus className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => handleRemoveItem(item)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CartItem
+              key={index}
+              item={item as CartItemData}
+              onQuantityChange={handleQuantityChange}
+              onRemove={handleRemoveItem}
+              calculateItemPrice={calculateItemPrice}
+            />
           ))}
 
           {shouldCollapse && (
@@ -611,72 +436,16 @@ const OrderForm: React.FC<OrderFormProps> = ({
           )}
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-          {watchOrderType === 'delivery' && watchDeliveryZone && (() => {
-            const zone = DELIVERY_ZONES[watchDeliveryZone as keyof typeof DELIVERY_ZONES];
-            if (!zone) return null;
-
-            const remaining = zone.minOrder - subtotal;
-            const progress = Math.min((subtotal / zone.minOrder) * 100, 100);
-
-            return (
-              <div className="mb-3 space-y-2">
-                <div className="text-sm text-gray-700">
-                  {remaining > 0 ? (
-                    <>Noch <span className="font-semibold">{remaining.toFixed(2).replace('.', ',')} €</span> bis der Mindestbestellwert erreicht ist</>
-                  ) : (
-                    <span className="font-semibold text-green-700">✓ Mindestbestellwert erreicht</span>
-                  )}
-                </div>
-                <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${progress}%`,
-                      background: progress >= 100
-                        ? 'linear-gradient(90deg, #15803d 0%, #22c55e 100%)'
-                        : 'linear-gradient(90deg, #ea580c 0%, #f59e0b 50%, #eab308 100%)'
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-600">Zwischensumme</span>
-            <span className="font-medium text-gray-900">{subtotal.toFixed(2).replace('.', ',')} €</span>
-          </div>
-
-          {pfand > 0 && (
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Pfand kosten</span>
-              <span className="font-medium text-gray-900">{pfand.toFixed(2).replace('.', ',')} €</span>
-            </div>
-          )}
-
-          {deliveryFee > 0 && (
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Liefergebühr</span>
-              <span className="font-medium text-gray-900">{deliveryFee.toFixed(2).replace('.', ',')} €</span>
-            </div>
-          )}
-
-          <div className="border-t border-gray-200 pt-2 mt-2">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-gray-900">Gesamt</span>
-              <span className="text-lg font-semibold text-gray-900">
-                {total.toFixed(2).replace('.', ',')} €
-              </span>
-            </div>
-          </div>
-
-          {!canOrder && minOrderMessage && (
-            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-              {minOrderMessage}
-            </div>
-          )}
-        </div>
+        <CartSummary
+          subtotal={subtotal}
+          pfand={pfand}
+          deliveryFee={deliveryFee}
+          total={total}
+          orderType={watchOrderType}
+          deliveryZone={watchDeliveryZone}
+          canOrder={canOrder}
+          minOrderMessage={minOrderMessage}
+        />
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -684,9 +453,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
               Bestellart
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className={`flex items-center justify-center cursor-pointer p-3 rounded-lg border-2 transition-all ${
-                watchOrderType === 'pickup' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
+              <label className={`flex items-center justify-center cursor-pointer p-3 rounded-lg border-2 transition-all ${watchOrderType === 'pickup' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}>
                 <input
                   type="radio"
                   value="pickup"
@@ -695,9 +463,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 />
                 <span className="text-sm font-medium text-gray-900">Abholung</span>
               </label>
-              <label className={`flex items-center justify-center cursor-pointer p-3 rounded-lg border-2 transition-all ${
-                watchOrderType === 'delivery' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
+              <label className={`flex items-center justify-center cursor-pointer p-3 rounded-lg border-2 transition-all ${watchOrderType === 'delivery' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}>
                 <input
                   type="radio"
                   value="delivery"
@@ -772,9 +539,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
               Lieferzeit
             </label>
             <div className="space-y-2">
-              <label className={`flex items-center cursor-pointer p-3 rounded-lg border-2 transition-all ${
-                watchDeliveryTime === 'asap' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
+              <label className={`flex items-center cursor-pointer p-3 rounded-lg border-2 transition-all ${watchDeliveryTime === 'asap' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}>
                 <input
                   type="radio"
                   value="asap"
@@ -783,9 +549,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 />
                 <span className="text-sm font-medium text-gray-900">So schnell wie möglich</span>
               </label>
-              <label className={`flex items-center cursor-pointer p-3 rounded-lg border-2 transition-all ${
-                watchDeliveryTime === 'specific' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
+              <label className={`flex items-center cursor-pointer p-3 rounded-lg border-2 transition-all ${watchDeliveryTime === 'specific' ? 'border-light-blue-400 bg-light-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}>
                 <input
                   type="radio"
                   value="specific"
@@ -900,11 +665,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
             <button
               type="submit"
               disabled={!canOrder || orderItems.length === 0 || isSubmitting}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
-                canOrder && orderItems.length > 0 && !isSubmitting
-                  ? 'bg-light-blue-500 hover:bg-light-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
+              className={`w-full py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${canOrder && orderItems.length > 0 && !isSubmitting
+                ? 'bg-light-blue-500 hover:bg-light-blue-600 text-white'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
             >
               {isSubmitting ? (
                 <>
@@ -919,7 +683,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
             </button>
           </div>
         </form>
-        
+
         {/* Bottom padding for mobile safe area */}
         <div className="h-6"></div>
       </div>

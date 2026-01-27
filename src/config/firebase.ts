@@ -20,7 +20,7 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   });
 }
 
-let db;
+let db: ReturnType<typeof getFirestore>;
 try {
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);

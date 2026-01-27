@@ -1,128 +1,86 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-import { MenuItem, PizzaSize } from '../types';
-
-interface OrderItem {
-  menuItem: MenuItem;
-  quantity: number;
-  selectedSize?: PizzaSize;
-  selectedIngredients?: string[];
-  selectedExtras?: string[];
-  selectedPastaType?: string;
-  selectedSauce?: string;
-  selectedPizzaSauces?: string[];
-  selectedCalzoneSauces?: string[];
-  selectedExclusions?: string[];
-  selectedSideDish?: string;
-}
+import { MenuItem, OrderItem } from '../types';
 
 interface CartState {
   items: OrderItem[];
-  addItem: (menuItem: MenuItem, selectedSize?: PizzaSize, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => void;
-  removeItem: (id: number, selectedSize?: PizzaSize, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => void;
-  updateQuantity: (id: number, quantity: number, selectedSize?: PizzaSize, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => void;
+  addItem: (item: Omit<OrderItem, 'cartItemId' | 'quantity'>) => void;
+  removeItem: (cartItemId: string) => void;
+  updateQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
 }
 
-// Helper function to create a unique key for cart items
-const getItemKey = (menuItem: MenuItem, selectedSize?: PizzaSize, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => {
-  const sizeKey = selectedSize ? selectedSize.name : 'default';
-  const ingredientsKey = selectedIngredients && selectedIngredients.length > 0
-    ? selectedIngredients.sort().join(',')
-    : 'none';
-  const extrasKey = selectedExtras && selectedExtras.length > 0
-    ? selectedExtras.sort().join(',')
-    : 'none';
-  const pastaTypeKey = selectedPastaType || 'none';
-  const sauceKey = selectedSauce || 'none';
-  const exclusionsKey = selectedExclusions && selectedExclusions.length > 0
-    ? selectedExclusions.sort().join(',')
-    : 'none';
-  const sideDishKey = selectedSideDish || 'none';
-  const pizzaSaucesKey = selectedPizzaSauces && selectedPizzaSauces.length > 0
-    ? selectedPizzaSauces.sort().join(',')
-    : 'none';
-  const calzoneSaucesKey = selectedCalzoneSauces && selectedCalzoneSauces.length > 0
-    ? selectedCalzoneSauces.sort().join(',')
-    : 'none';
-  return `${menuItem.id}-${sizeKey}-${ingredientsKey}-${extrasKey}-${pastaTypeKey}-${sauceKey}-${exclusionsKey}-${sideDishKey}-${pizzaSaucesKey}-${calzoneSaucesKey}`;
-};
-
-// Helper function to find item in cart
-const findItemIndex = (items: OrderItem[], menuItem: MenuItem, selectedSize?: PizzaSize, selectedIngredients?: string[], selectedExtras?: string[], selectedPastaType?: string, selectedSauce?: string, selectedExclusions?: string[], selectedSideDish?: string, selectedPizzaSauces?: string[], selectedCalzoneSauces?: string[]) => {
-  return items.findIndex(item => {
-    const itemKey = getItemKey(item.menuItem, item.selectedSize, item.selectedIngredients, item.selectedExtras, item.selectedPastaType, item.selectedSauce, item.selectedExclusions, item.selectedSideDish, item.selectedPizzaSauces, item.selectedCalzoneSauces);
-    const searchKey = getItemKey(menuItem, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces);
-    return itemKey === searchKey;
-  });
+// Helper: Generate a unique signature for the item options to group identical items
+const generateItemSignature = (item: Omit<OrderItem, 'cartItemId' | 'quantity'>): string => {
+  const parts = [
+    item.menuItem.id,
+    item.selectedSize?.name || 'default',
+    (item.selectedIngredients || []).sort().join(','),
+    (item.selectedExtras || []).sort().join(','),
+    item.selectedPastaType || 'none',
+    item.selectedSauce || 'none',
+    (item.selectedExclusions || []).sort().join(','),
+    item.selectedSideDish || 'none',
+    (item.selectedPizzaSauces || []).sort().join(','),
+    (item.selectedCalzoneSauces || []).sort().join(',')
+  ];
+  return parts.join('|');
 };
 
 export const useCartStore = create<CartState>()(
   persist(
-    set => ({
+    (set) => ({
       items: [],
 
-      addItem: (menuItem, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces) =>
-        set(state => {
-          const currentItems = [...state.items];
-          const existingItemIndex = findItemIndex(currentItems, menuItem, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces);
+      addItem: (newItemProps) =>
+        set((state) => {
+          const signature = generateItemSignature(newItemProps);
+
+          // Check if identical item already exists
+          const existingItemIndex = state.items.findIndex(
+            (item) => generateItemSignature(item) === signature
+          );
 
           if (existingItemIndex >= 0) {
-            currentItems[existingItemIndex] = {
-              ...currentItems[existingItemIndex],
-              quantity: currentItems[existingItemIndex].quantity + 1
+            // Increment quantity
+            const updatedItems = [...state.items];
+            updatedItems[existingItemIndex] = {
+              ...updatedItems[existingItemIndex],
+              quantity: updatedItems[existingItemIndex].quantity + 1,
             };
-          } else {
-            currentItems.push({
-              menuItem: menuItem,
-              quantity: 1,
-              selectedSize,
-              selectedIngredients: selectedIngredients || [],
-              selectedExtras: selectedExtras || [],
-              selectedPastaType,
-              selectedSauce,
-              selectedPizzaSauces: selectedPizzaSauces || [],
-              selectedCalzoneSauces: selectedCalzoneSauces || [],
-              selectedExclusions: selectedExclusions || [],
-              selectedSideDish
-            });
+            return { items: updatedItems };
           }
 
-          return { items: currentItems };
+          // Add new item
+          const newItem: OrderItem = {
+            ...newItemProps,
+            cartItemId: crypto.randomUUID(), // Modern random ID
+            quantity: 1,
+          };
+
+          return { items: [...state.items, newItem] };
         }),
 
-      removeItem: (id, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces) =>
-        set(state => ({
-          items: state.items.filter(item => {
-            const itemKey = getItemKey(item.menuItem, item.selectedSize, item.selectedIngredients, item.selectedExtras, item.selectedPastaType, item.selectedSauce, item.selectedExclusions, item.selectedSideDish, item.selectedPizzaSauces, item.selectedCalzoneSauces);
-            const searchKey = getItemKey({ id } as MenuItem, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces);
-            return itemKey !== searchKey;
-          })
+      removeItem: (cartItemId) =>
+        set((state) => ({
+          items: state.items.filter((item) => item.cartItemId !== cartItemId),
         })),
 
-      updateQuantity: (id, quantity, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces) =>
-        set(state => {
+      updateQuantity: (cartItemId, quantity) =>
+        set((state) => {
           if (quantity <= 0) {
             return {
-              items: state.items.filter(item => {
-                const itemKey = getItemKey(item.menuItem, item.selectedSize, item.selectedIngredients, item.selectedExtras, item.selectedPastaType, item.selectedSauce, item.selectedExclusions, item.selectedSideDish, item.selectedPizzaSauces, item.selectedCalzoneSauces);
-                const searchKey = getItemKey({ id } as MenuItem, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces);
-                return itemKey !== searchKey;
-              })
+              items: state.items.filter((item) => item.cartItemId !== cartItemId),
             };
           }
-
           return {
-            items: state.items.map(item => {
-              const itemKey = getItemKey(item.menuItem, item.selectedSize, item.selectedIngredients, item.selectedExtras, item.selectedPastaType, item.selectedSauce, item.selectedExclusions, item.selectedSideDish, item.selectedPizzaSauces, item.selectedCalzoneSauces);
-              const searchKey = getItemKey({ id } as MenuItem, selectedSize, selectedIngredients, selectedExtras, selectedPastaType, selectedSauce, selectedExclusions, selectedSideDish, selectedPizzaSauces, selectedCalzoneSauces);
-              return itemKey === searchKey ? { ...item, quantity } : item;
-            })
+            items: state.items.map((item) =>
+              item.cartItemId === cartItemId ? { ...item, quantity } : item
+            ),
           };
         }),
 
-      clearCart: () => set({ items: [] })
+      clearCart: () => set({ items: [] }),
     }),
     { name: 'cart-storage' }
   )

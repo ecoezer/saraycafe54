@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Printer, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
+import { Printer, AlertCircle, CheckCircle } from 'lucide-react';
 import { db } from '../config/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 

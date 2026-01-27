@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { MenuItem, PizzaSize } from '../types';
 import { WhatsAppService } from '../services/WhatsAppService';
 import { FirebaseService } from '../services/FirebaseService';
 import { OrderTransformer } from '../utils/transformers/orderTransformer';
@@ -7,9 +8,9 @@ import { DeliveryService } from '../services/DeliveryService';
 import { OrderFormData } from '../validators/orderValidation';
 
 interface OrderItem {
-  menuItem: any;
+  menuItem: MenuItem;
   quantity: number;
-  selectedSize?: any;
+  selectedSize?: PizzaSize;
   selectedIngredients?: string[];
   selectedExtras?: string[];
   selectedPastaType?: string;
@@ -70,7 +71,9 @@ export const useOrderSubmission = () => {
         .catch(error => console.error('Error saving order to Firebase:', error));
 
       const message = WhatsAppService.generateMessage(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         orderItems as any,
         subtotal,
         deliveryFee,

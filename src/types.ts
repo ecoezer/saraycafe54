@@ -28,6 +28,7 @@ export interface PizzaSize {
 }
 
 export interface OrderItem {
+  cartItemId: string; // Unique ID for the item in the cart
   menuItem: MenuItem;
   quantity: number;
   selectedSize?: PizzaSize;

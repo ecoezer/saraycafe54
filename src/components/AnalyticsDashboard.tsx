@@ -47,23 +47,27 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ onBack }) => {
     switch (period) {
       case 'today':
         return [startOfDay, endOfDay];
-      case 'yesterday':
+      case 'yesterday': {
         const yesterday = new Date(startOfDay);
         yesterday.setDate(yesterday.getDate() - 1);
         const endYesterday = new Date(yesterday);
         endYesterday.setHours(23, 59, 59, 999);
         return [yesterday, endYesterday];
-      case 'week':
+      }
+      case 'week': {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
         return [startOfWeek, endOfDay];
-      case 'month':
+      }
+      case 'month': {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         return [startOfMonth, endOfDay];
-      case 'year':
+      }
+      case 'year': {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         return [startOfYear, endOfDay];
+      }
       case 'all':
         return [new Date(0), endOfDay];
       default:

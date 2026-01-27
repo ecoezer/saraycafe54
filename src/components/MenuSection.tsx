@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Plus, ChefHat } from 'lucide-react';
-import { MenuItem, PizzaSize } from '../types';
+import { Plus } from 'lucide-react';
+import { MenuItem, OrderItem } from '../types';
 import ItemModal from './ItemModal';
 import OrderConfirmationModal from './modal/OrderConfirmationModal';
 import PriceDisplay from './menu/PriceDisplay';
@@ -12,25 +12,14 @@ interface MenuSectionProps {
   title: string;
   description?: string;
   subTitle?: string;
-  items: MenuItem[];
-  bgColor?: string;
-  onAddToOrder: (
-    menuItem: MenuItem,
-    selectedSize?: PizzaSize,
-    selectedIngredients?: string[],
-    selectedExtras?: string[],
-    selectedPastaType?: string,
-    selectedSauce?: string,
-    selectedExclusions?: string[],
-    selectedSideDish?: string,
-    selectedPizzaSauces?: string[],
-    selectedCalzoneSauces?: string[]
-  ) => void;
+  items: readonly MenuItem[];
+
+  onAddToOrder: (item: Omit<OrderItem, 'cartItemId' | 'quantity'>) => void;
   onModalStateChange?: (isOpen: boolean) => void;
 }
 
 
-const MenuSection: React.FC<MenuSectionProps> = ({ title, description, subTitle, items, bgColor = 'bg-light-blue-400', onAddToOrder, onModalStateChange }) => {
+const MenuSection: React.FC<MenuSectionProps> = ({ title, description, subTitle, items, onAddToOrder, onModalStateChange }) => {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showSimpleItemConfirmation, setShowSimpleItemConfirmation] = useState(false);
   const [simpleItemForConfirmation, setSimpleItemForConfirmation] = useState<MenuItem | null>(null);
@@ -164,7 +153,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ title, description, subTitle,
           totalPrice={simpleItemForConfirmation.price}
           onConfirm={(quantity) => {
             for (let i = 0; i < quantity; i++) {
-              onAddToOrder(simpleItemForConfirmation);
+              onAddToOrder({ menuItem: simpleItemForConfirmation });
             }
             setShowSimpleItemConfirmation(false);
             setSimpleItemForConfirmation(null);

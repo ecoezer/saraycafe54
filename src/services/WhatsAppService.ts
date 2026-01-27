@@ -86,6 +86,7 @@ export class WhatsAppService {
         itemText += ` - Extras: ${item.selectedExtras.join(', ')} (+${(item.selectedExtras.length * 1.00).toFixed(2).replace('.', ',')}€)`;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const itemTotal = PriceService.calculateItemTotal(item as any);
       itemText += ` = ${PriceService.formatPriceWithoutSymbol(itemTotal)} €`;
 

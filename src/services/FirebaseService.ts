@@ -26,12 +26,12 @@ export interface OrderData {
   items: OrderItem[];
   total_amount: number;
   notes: string;
-  created_at?: Timestamp | any;
+  created_at?: Timestamp | { seconds: number; nanoseconds: number } | Date | string | null;
   browser_info?: string;
   device_type?: string;
   ip_address?: string;
   printed?: boolean;
-  print_timestamp?: Timestamp | any;
+  print_timestamp?: Timestamp | { seconds: number; nanoseconds: number } | Date | string | null;
   print_retry_count?: number;
   print_error?: string;
 }
@@ -106,7 +106,7 @@ export class FirebaseService {
       if (error instanceof Error) {
         console.error('Error details:', {
           message: error.message,
-          code: (error as any).code,
+          code: (error as { code?: string }).code,
           name: error.name
         });
       }

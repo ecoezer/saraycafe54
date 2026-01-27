@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { NAVIGATION_CONFIG } from '../config/menuConfig';
+
 interface NavigationProps {
   onCategoryClick?: () => void;
 }
@@ -11,24 +13,7 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
   const [showRightArrow, setShowRightArrow] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const navigationItems = [
-    ['fleischgerichte', 'Drehspieß'],
-    ['auflauf', 'Auflauf'],
-    ['pizza', 'Pizza'],
-    ['calzone', 'Calzone'],
-    ['baguette', 'Baguette'],
-    ['lahmacun', 'Lahmacun'],
-    ['pide', 'Pide'],
-    ['croques', 'Falafel Burger'],
-    ['schnitzel', 'Schnitzel'],
-    ['pasta', 'Pasta'],
-    ['salate', 'Salate'],
-    ['grillspezialitaeten', 'Grillspezialitäten'],
-    ['dips', 'Dips & Soßen'],
-    ['nachtisch', 'Nachtisch'],
-    ['alkoholfreie-getraenke', 'Alkoholfreie Getränke'],
-    ['alkoholische-getraenke', 'Alkoholische Getränke']
-  ];
+  const navigationItems = NAVIGATION_CONFIG;
 
   // Check scroll position and update arrow visibility
   const updateArrowVisibility = () => {
@@ -42,14 +27,14 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
     const { scrollLeft, scrollWidth, clientWidth } = container;
     // Add a small buffer (5px) to account for rounding errors and ensure we only show arrows when actually needed
     const isScrollable = scrollWidth > clientWidth + 5;
-    
+
     // Only show arrows if content actually overflows and scrolling is needed
     if (!isScrollable) {
       setShowLeftArrow(false);
       setShowRightArrow(false);
       return;
     }
-    
+
     // Show left arrow only if we can scroll left (not at the beginning)
     setShowLeftArrow(scrollLeft > 10);
     // Show right arrow only if we can scroll right (not at the end)
@@ -65,17 +50,17 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
     const handleResize = () => {
       setTimeout(updateArrowVisibility, 100);
     };
-    
+
     // Also listen for content changes that might affect scrollability
     const resizeObserver = new ResizeObserver(() => {
       setTimeout(updateArrowVisibility, 50);
     });
-    
+
     resizeObserver.observe(container);
 
     container.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', handleResize);
-    
+
     // Initial check
     setTimeout(updateArrowVisibility, 100);
 
@@ -111,13 +96,13 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
 
     const scrollAmount = container.clientWidth * 0.6;
     const currentScroll = container.scrollLeft;
-    const targetScroll = direction === 'left' 
+    const targetScroll = direction === 'left'
       ? Math.max(0, currentScroll - scrollAmount)
       : Math.min(container.scrollWidth - container.clientWidth, currentScroll + scrollAmount);
-    
-    container.scrollTo({ 
-      left: targetScroll, 
-      behavior: 'smooth' 
+
+    container.scrollTo({
+      left: targetScroll,
+      behavior: 'smooth'
     });
   };
 
@@ -165,7 +150,7 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
               scrollSnapType: 'x mandatory'
             }}
           >
-            {navigationItems.map(([id, label], index) => {
+            {navigationItems.map(({ id, label }) => {
               const isActive = activeSection === id;
               const isAlcoholic = id === 'alkoholische-getraenke';
 
@@ -173,20 +158,18 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
                 <button
                   key={id}
                   onClick={() => handleItemClick(id)}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-1.5 ${isActive
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   style={{ scrollSnapAlign: 'start' }}
                 >
                   {label}
                   {isAlcoholic && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                      isActive
-                        ? 'bg-white text-gray-900'
-                        : 'bg-gray-900 text-white'
-                    }`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${isActive
+                      ? 'bg-white text-gray-900'
+                      : 'bg-gray-900 text-white'
+                      }`}>
                       18+
                     </span>
                   )}
@@ -211,11 +194,7 @@ const Navigation: React.FC<NavigationProps> = ({ onCategoryClick }) => {
         </div>
       </div>
 
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+
     </div>
   );
 };

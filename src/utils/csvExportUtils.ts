@@ -13,16 +13,38 @@ const escapeCsvField = (field: string | number | null | undefined): string => {
   return str;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const formatDateGerman = (timestamp: any): string => {
   if (!timestamp) return '';
-  let date: Date;
-  if (timestamp.toDate) {
-    date = timestamp.toDate();
-  } else if (timestamp.seconds) {
-    date = new Date(timestamp.seconds * 1000);
-  } else {
-    date = new Date(timestamp);
+
+  // Handle Firestore Timestamp
+  if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof (timestamp as any).toDate === 'function') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (timestamp as any).toDate().toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
+
+  // Handle object with seconds
+  if (typeof timestamp === 'object' && timestamp !== null && 'seconds' in timestamp && typeof (timestamp as any).seconds === 'number') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new Date((timestamp as any).seconds * 1000).toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  // Handle other types
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return '';
+
   return date.toLocaleString('de-DE', {
     day: '2-digit',
     month: '2-digit',

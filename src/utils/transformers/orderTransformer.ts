@@ -19,19 +19,20 @@ interface FirebaseOrderItem {
   name: string;
   quantity: number;
   basePrice: number;
-  selectedSize: { name: string; description?: string; price: number } | null;
-  selectedIngredients: string[] | null;
-  selectedExtras: string[] | null;
-  selectedPastaType: string | null;
-  selectedSauce: string | null;
-  selectedExclusions: string[] | null;
-  selectedSideDish: string | null;
+  selectedSize: { name: string; description?: string; price: number } | undefined;
+  selectedIngredients: string[] | undefined;
+  selectedExtras: string[] | undefined;
+  selectedPastaType: string | undefined;
+  selectedSauce: string | undefined;
+  selectedExclusions: string[] | undefined;
+  selectedSideDish: string | undefined;
   totalPrice: number;
 }
 
 export class OrderTransformer {
   static transformCartItemToFirebaseItem(item: CartItem): FirebaseOrderItem {
     const basePrice = item.selectedSize ? item.selectedSize.price : item.menuItem.price;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalPrice = PriceService.calculateItemTotal(item as any);
 
     return {
@@ -44,13 +45,13 @@ export class OrderTransformer {
         name: item.selectedSize.name,
         description: item.selectedSize.description,
         price: item.selectedSize.price
-      } : null,
-      selectedIngredients: item.selectedIngredients || null,
-      selectedExtras: item.selectedExtras || null,
-      selectedPastaType: item.selectedPastaType || null,
-      selectedSauce: item.selectedSauce || null,
-      selectedExclusions: item.selectedExclusions || null,
-      selectedSideDish: item.selectedSideDish || null,
+      } : undefined,
+      selectedIngredients: item.selectedIngredients || undefined,
+      selectedExtras: item.selectedExtras || undefined,
+      selectedPastaType: item.selectedPastaType || undefined,
+      selectedSauce: item.selectedSauce || undefined,
+      selectedExclusions: item.selectedExclusions || undefined,
+      selectedSideDish: item.selectedSideDish || undefined,
       totalPrice
     };
   }

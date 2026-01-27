@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ShoppingBag, Clock, Phone, MapPin, Package, LogOut, RefreshCw, Monitor, Smartphone, Calendar, Trash2, BarChart3, Printer, CheckCircle, AlertCircle } from 'lucide-react';
 import { fetchOrders, deleteOrder, reprintOrder, OrderData } from '../services/orderService';
 import { PrinterStatus } from './PrinterStatus';
@@ -23,7 +23,7 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [reprintingOrderId, setReprintingOrderId] = useState<string | null>(null);
 
-  const getOrderDate = (order: OrderData): Date => {
+  const getOrderDate = useCallback((order: OrderData): Date => {
     if (order.created_at?.toDate) {
       return order.created_at.toDate();
     } else if (order.created_at?.seconds) {
@@ -31,9 +31,9 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
     } else {
       return new Date(order.created_at);
     }
-  };
+  }, []);
 
-  const filterOrders = (allOrders: OrderData[], filter: TimeFilter, startDate?: string, endDate?: string) => {
+  const filterOrders = useCallback((allOrders: OrderData[], filter: TimeFilter, startDate?: string, endDate?: string) => {
     if (filter === 'all') {
       return allOrders;
     }
@@ -70,9 +70,9 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
           return true;
       }
     });
-  };
+  }, [getOrderDate]);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     setIsLoading(true);
     setError('');
 
@@ -97,15 +97,15 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterOrders, timeFilter, customStartDate, customEndDate, getOrderDate]);
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
 
   useEffect(() => {
     setFilteredOrders(filterOrders(orders, timeFilter, customStartDate, customEndDate));
-  }, [timeFilter, orders, customStartDate, customEndDate]);
+  }, [timeFilter, orders, customStartDate, customEndDate, filterOrders]);
 
   const handleCustomDateApply = () => {
     if (customStartDate && customEndDate) {
@@ -113,16 +113,38 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'N/A';
-    let date: Date;
-    if (timestamp.toDate) {
-      date = timestamp.toDate();
-    } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000);
-    } else {
-      date = new Date(timestamp);
+
+    // Handle Firestore Timestamp
+    if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof (timestamp as any).toDate === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (timestamp as any).toDate().toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     }
+
+    // Handle object with seconds
+    if (typeof timestamp === 'object' && timestamp !== null && 'seconds' in timestamp && typeof (timestamp as any).seconds === 'number') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return new Date((timestamp as any).seconds * 1000).toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    // Handle other types
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+
     return date.toLocaleString('de-DE', {
       day: '2-digit',
       month: '2-digit',
@@ -225,51 +247,46 @@ const AdminOrderHistory: React.FC<AdminOrderHistoryProps> = ({ onLogout, onViewA
           <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={() => setTimeFilter('all')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timeFilter === 'all'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${timeFilter === 'all'
+                ? 'bg-orange-500 text-white border border-orange-600'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
             >
               All
             </button>
             <button
               onClick={() => setTimeFilter('today')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timeFilter === 'today'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${timeFilter === 'today'
+                ? 'bg-orange-500 text-white border border-orange-600'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
             >
               Today
             </button>
             <button
               onClick={() => setTimeFilter('week')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timeFilter === 'week'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${timeFilter === 'week'
+                ? 'bg-orange-500 text-white border border-orange-600'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
             >
               Week
             </button>
             <button
               onClick={() => setTimeFilter('month')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timeFilter === 'month'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${timeFilter === 'month'
+                ? 'bg-orange-500 text-white border border-orange-600'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
             >
               Month
             </button>
             <button
               onClick={() => setTimeFilter('year')}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
-                timeFilter === 'year'
-                  ? 'bg-orange-500 text-white border border-orange-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${timeFilter === 'year'
+                ? 'bg-orange-500 text-white border border-orange-600'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
             >
               Year
             </button>

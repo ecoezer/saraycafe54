@@ -1,113 +1,103 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { MenuItem, PizzaSize } from '../types';
-import { ItemModalMachine, ModalStep, StepConfig } from '../machines/itemModalMachine';
-import { pastaTypes, sideDishOptions } from '../data/menuItems';
+import { getItemFlow, getNextStep, getPreviousStep, ModalStep } from '../constants/itemFlows';
+import { useSauceSelection, useExtrasSelection, useExclusionSelection } from './useSelections';
+import { calculateExtraPrice, calculateSaucePrice } from '../constants/pricing';
+import { pastaTypes, sideDishOptions, granatapfelOptions } from '../data/menuItems';
 
-export const useItemModal = (item: MenuItem) => {
-  const [currentStep, setCurrentStep] = useState<ModalStep>('meat');
-  const [selectedSize, setSelectedSize] = useState<PizzaSize | undefined>(
-    item.sizes ? item.sizes[0] : undefined
-  );
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
-  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
-  const [selectedPastaType, setSelectedPastaType] = useState<string>(
-    item.isPasta ? pastaTypes[0] : ''
-  );
-  const [selectedSauce, setSelectedSauce] = useState<string>('');
-  const [selectedMeatType, setSelectedMeatType] = useState<string>(
-    item.isMeatSelection ? 'Kalbfleisch' : ''
-  );
-  const [selectedSauces, setSelectedSauces] = useState<string[]>([]);
-  const [selectedExclusions, setSelectedExclusions] = useState<string[]>([]);
-  const [selectedSideDish, setSelectedSideDish] = useState<string>(
-    (item.number === 9 || item.number === 10) ? sideDishOptions[0] : ''
-  );
-  const [showAllSauces, setShowAllSauces] = useState(false);
-  const [showAllExclusions, setShowAllExclusions] = useState(false);
+interface Selections {
+  size?: PizzaSize;
+  pasta: string;
+  meat: string;
+  sideDish: string;
+  granatapfel: string;
+}
 
-  const stepConfig: StepConfig = useMemo(() => ({
-    requiresMeatSelection: !!item.isMeatSelection,
-    requiresSauceSelection: !!item.isMeatSelection,
-    requiresExclusionSelection: !!item.isMeatSelection,
-    requiresSideDishSelection: (item.number === 9 || item.number === 10) && !!item.isMeatSelection
-  }), [item.isMeatSelection, item.number]);
+export const useItemModal = (item: MenuItem, isOpen: boolean) => {
+  const [currentStep, setCurrentStep] = useState<ModalStep>('complete');
 
-  const modalState = useMemo(() => ({
-    currentStep,
-    selectedMeatType,
-    selectedSauces,
-    selectedExclusions,
-    selectedSideDish
-  }), [currentStep, selectedMeatType, selectedSauces, selectedExclusions, selectedSideDish]);
+  // Consolidated selection state
+  const [selections, setSelections] = useState<Selections>({
+    size: undefined,
+    pasta: pastaTypes[0],
+    meat: 'Kalbfleisch',
+    sideDish: '',
+    granatapfel: granatapfelOptions[1]
+  });
 
-  const canProceed = useMemo(() => {
-    return ItemModalMachine.canProceed(currentStep, modalState, stepConfig);
-  }, [currentStep, modalState, stepConfig]);
+  // Collection hooks
+  const { selectedSauces, toggleSauce, clearSauces } = useSauceSelection({ maxSauces: 3 });
+  const { selectedExtras, toggleExtra, clearExtras } = useExtrasSelection();
+  const { selectedExclusions, toggleExclusion, clearExclusions } = useExclusionSelection();
 
-  const nextStep = useCallback(() => {
-    const next = ItemModalMachine.getNextStep(currentStep, stepConfig);
-    if (next && next !== 'complete') {
-      setCurrentStep(next);
+  // Initialization
+  useEffect(() => {
+    if (isOpen) {
+      const flow = getItemFlow(item);
+      setCurrentStep(flow.getInitialStep());
+      setSelections({
+        size: item.sizes ? item.sizes[0] : undefined,
+        pasta: item.isPasta ? pastaTypes[0] : '',
+        meat: item.isMeatSelection ? 'Kalbfleisch' : '',
+        sideDish: (item.number === 9 || item.number === 10) ? sideDishOptions[0] : '',
+        granatapfel: granatapfelOptions[1]
+      });
+      clearSauces();
+      clearExtras();
+      clearExclusions();
     }
+  }, [isOpen, item, clearSauces, clearExtras, clearExclusions]);
+
+  // Price Calculation
+  const totalPrice = useMemo(() => {
+    let price = selections.size ? selections.size.price : item.price;
+
+    selectedExtras.forEach(extra => {
+      const type = item.isPizza ? 'pizza' : item.isCalzone ? 'calzone' : item.isBurger ? 'burger' : item.isMeatSelection ? 'doner' : 'standard';
+      price += calculateExtraPrice(type, selections.size?.name, extra);
+    });
+
+    if ([78, 79, 564, 565, 566, 567, 568].includes(Number(item.number)) || item.isPizza || item.isCalzone || item.id === 88) {
+      price += calculateSaucePrice(selectedSauces);
+    }
+
+    return price;
+  }, [item, selections.size, selectedExtras, selectedSauces]);
+
+  // Navigation
+  const goToNextStep = useCallback(() => {
+    const next = getNextStep(getItemFlow(item), currentStep);
+
+    // Validation
+    if (currentStep === 'meat' && !selections.meat) return;
+    if ((currentStep === 'pizzaSize' || currentStep === 'calzoneSize') && !selections.size) return;
+
+    if (next) setCurrentStep(next);
     return next;
-  }, [currentStep, stepConfig]);
+  }, [item, currentStep, selections.meat, selections.size]);
 
-  const previousStep = useCallback(() => {
-    const prev = ItemModalMachine.getPreviousStep(currentStep, stepConfig);
-    if (prev) {
-      setCurrentStep(prev);
-    }
-  }, [currentStep, stepConfig]);
+  const goToPreviousStep = useCallback(() => {
+    const prev = getPreviousStep(getItemFlow(item), currentStep);
+    if (prev) setCurrentStep(prev);
+  }, [item, currentStep]);
 
-  const resetState = useCallback(() => {
-    const initialStep = ItemModalMachine.getInitialStep(stepConfig);
-    setCurrentStep(initialStep);
-    setSelectedIngredients([]);
-    setSelectedExtras([]);
-    setSelectedSauces([]);
-    setSelectedExclusions([]);
-    setShowAllSauces(false);
-    setShowAllExclusions(false);
-  }, [stepConfig]);
-
-  const getStepTitle = useCallback(() => {
-    return ItemModalMachine.getStepTitle(currentStep, item.number as number);
-  }, [currentStep, item.number]);
-
-  const getButtonText = useCallback((price: number) => {
-    return ItemModalMachine.getButtonText(currentStep, stepConfig, price);
-  }, [currentStep, stepConfig]);
+  // Generic update helper
+  const updateSelection = useCallback((key: keyof Selections, value: any) => {
+    setSelections(prev => ({ ...prev, [key]: value }));
+  }, []);
 
   return {
     currentStep,
-    selectedSize,
-    setSelectedSize,
-    selectedIngredients,
-    setSelectedIngredients,
-    selectedExtras,
-    setSelectedExtras,
-    selectedPastaType,
-    setSelectedPastaType,
-    selectedSauce,
-    setSelectedSauce,
-    selectedMeatType,
-    setSelectedMeatType,
+    selections,
+    updateSelection,
     selectedSauces,
-    setSelectedSauces,
+    toggleSauce,
+    selectedExtras,
+    toggleExtra,
     selectedExclusions,
-    setSelectedExclusions,
-    selectedSideDish,
-    setSelectedSideDish,
-    showAllSauces,
-    setShowAllSauces,
-    showAllExclusions,
-    setShowAllExclusions,
-    canProceed,
-    nextStep,
-    previousStep,
-    resetState,
-    getStepTitle,
-    getButtonText,
-    stepConfig
+    toggleExclusion,
+    totalPrice,
+    goToNextStep,
+    goToPreviousStep
   };
 };

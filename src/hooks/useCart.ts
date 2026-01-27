@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useCartStore } from '../store/cart.store';
-import { MenuItem, PizzaSize } from '../types';
+import { OrderItem } from '../types';
 
 export const useCart = () => {
   const items = useCartStore(state => state.items);
@@ -9,84 +9,16 @@ export const useCart = () => {
   const updateQuantityInStore = useCartStore(state => state.updateQuantity);
   const clearCartInStore = useCartStore(state => state.clearCart);
 
-  const addItem = useCallback((
-    menuItem: MenuItem,
-    selectedSize?: PizzaSize,
-    selectedIngredients?: string[],
-    selectedExtras?: string[],
-    selectedPastaType?: string,
-    selectedSauce?: string,
-    selectedExclusions?: string[],
-    selectedSideDish?: string,
-    selectedPizzaSauces?: string[],
-    selectedCalzoneSauces?: string[]
-  ) => {
-    addItemToStore(
-      menuItem,
-      selectedSize,
-      selectedIngredients,
-      selectedExtras,
-      selectedPastaType,
-      selectedSauce,
-      selectedExclusions,
-      selectedSideDish,
-      selectedPizzaSauces,
-      selectedCalzoneSauces
-    );
+  const addItem = useCallback((item: Omit<OrderItem, 'cartItemId' | 'quantity'>) => {
+    addItemToStore(item);
   }, [addItemToStore]);
 
-  const removeItem = useCallback((
-    id: number,
-    selectedSize?: PizzaSize,
-    selectedIngredients?: string[],
-    selectedExtras?: string[],
-    selectedPastaType?: string,
-    selectedSauce?: string,
-    selectedExclusions?: string[],
-    selectedSideDish?: string,
-    selectedPizzaSauces?: string[],
-    selectedCalzoneSauces?: string[]
-  ) => {
-    removeItemFromStore(
-      id,
-      selectedSize,
-      selectedIngredients,
-      selectedExtras,
-      selectedPastaType,
-      selectedSauce,
-      selectedExclusions,
-      selectedSideDish,
-      selectedPizzaSauces,
-      selectedCalzoneSauces
-    );
+  const removeItem = useCallback((cartItemId: string) => {
+    removeItemFromStore(cartItemId);
   }, [removeItemFromStore]);
 
-  const updateQuantity = useCallback((
-    id: number,
-    quantity: number,
-    selectedSize?: PizzaSize,
-    selectedIngredients?: string[],
-    selectedExtras?: string[],
-    selectedPastaType?: string,
-    selectedSauce?: string,
-    selectedExclusions?: string[],
-    selectedSideDish?: string,
-    selectedPizzaSauces?: string[],
-    selectedCalzoneSauces?: string[]
-  ) => {
-    updateQuantityInStore(
-      id,
-      quantity,
-      selectedSize,
-      selectedIngredients,
-      selectedExtras,
-      selectedPastaType,
-      selectedSauce,
-      selectedExclusions,
-      selectedSideDish,
-      selectedPizzaSauces,
-      selectedCalzoneSauces
-    );
+  const updateQuantity = useCallback((cartItemId: string, quantity: number) => {
+    updateQuantityInStore(cartItemId, quantity);
   }, [updateQuantityInStore]);
 
   const clearCart = useCallback(() => {
